@@ -1,11 +1,27 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 import sqlite3
 import os
 from datetime import datetime
 from typing import Optional
 
 app = FastAPI(title="QR Tracker API", version="1.0.0")
+
+# Servir la interfaz gráfica del generador en la raíz
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+@app.get("/", include_in_schema=False)
+async def root() -> FileResponse:
+    return FileResponse(os.path.join(BASE_DIR, "index.html"))
+
+@app.get("/styles.css", include_in_schema=False)
+async def styles() -> FileResponse:
+    return FileResponse(os.path.join(BASE_DIR, "styles.css"))
+
+@app.get("/app.js", include_in_schema=False)
+async def app_js() -> FileResponse:
+    return FileResponse(os.path.join(BASE_DIR, "app.js"))
 
 # Configurar CORS
 app.add_middleware(
@@ -16,8 +32,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 🔹 Configuración de la base de datos SQLite
-DB_PATH = "qr_tracker.db"
+# 🔹 Configuración de la base de datos SQLite (configurable por entorno para pruebas)
+DB_PATH = os.environ.get("QR_DB_PATH", "qr_tracker.db")
 
 def get_connection():
     try:
@@ -73,8 +89,8 @@ async def scan_qr(request: Request):
     cursor = conn.cursor()
 
     ahora = datetime.now()
-    fecha = ahora.date()
-    hora = ahora.time()
+    fecha = ahora.date().isoformat()
+    hora = ahora.time().isoformat()
     ip = request.client.host
     user_agent = request.headers.get("user-agent", "")
     referer = request.headers.get("referer", "")
@@ -107,32 +123,32 @@ async def ver_registros(
     limit: Optional[int] = 100
 ):
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     query = "SELECT * FROM scans WHERE 1=1"
     params = []
 
     if fecha:
-        query += " AND fecha = %s"
+        query += " AND fecha = ?"
         params.append(fecha)
     
     if mes:
-        query += " AND month = %s"
+        query += " AND month = ?"
         params.append(mes)
     
     if año:
-        query += " AND year = %s"
+        query += " AND year = ?"
         params.append(año)
     
     if hora_inicio is not None:
-        query += " AND hour >= %s"
+        query += " AND hour >= ?"
         params.append(hora_inicio)
     
     if hora_fin is not None:
-        query += " AND hour <= %s"
+        query += " AND hour <= ?"
         params.append(hora_fin)
 
-    query += " ORDER BY timestamp DESC LIMIT %s"
+    query += " ORDER BY timestamp DESC LIMIT ?"
     params.append(limit)
 
     cursor.execute(query, params)
@@ -157,17 +173,17 @@ async def ver_registros(
 @app.get("/estadisticas/por-dia")
 async def estadisticas_por_dia(año: Optional[int] = None, mes: Optional[int] = None):
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     
     query = "SELECT fecha, COUNT(*) as total_escaneos FROM scans WHERE 1=1"
     params = []
     
     if año:
-        query += " AND year = %s"
+        query += " AND year = ?"
         params.append(año)
     
     if mes:
-        query += " AND month = %s"
+        query += " AND month = ?"
         params.append(mes)
     
     query += " GROUP BY fecha ORDER BY fecha DESC"
@@ -187,13 +203,13 @@ async def estadisticas_por_dia(año: Optional[int] = None, mes: Optional[int] = 
 @app.get("/estadisticas/por-mes")
 async def estadisticas_por_mes(año: Optional[int] = None):
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     
     query = "SELECT year, month, COUNT(*) as total_escaneos FROM scans WHERE 1=1"
     params = []
     
     if año:
-        query += " AND year = %s"
+        query += " AND year = ?"
         params.append(año)
     
     query += " GROUP BY year, month ORDER BY year DESC, month DESC"
@@ -213,13 +229,13 @@ async def estadisticas_por_mes(año: Optional[int] = None):
 @app.get("/estadisticas/por-hora")
 async def estadisticas_por_hora(fecha: Optional[str] = None):
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     
     query = "SELECT hour, COUNT(*) as total_escaneos FROM scans WHERE 1=1"
     params = []
     
     if fecha:
-        query += " AND fecha = %s"
+        query += " AND fecha = ?"
         params.append(fecha)
     
     query += " GROUP BY hour ORDER BY hour ASC"
@@ -239,7 +255,7 @@ async def estadisticas_por_hora(fecha: Optional[str] = None):
 @app.get("/estadisticas/por-año")
 async def estadisticas_por_año():
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     
     query = "SELECT year, COUNT(*) as total_escaneos FROM scans GROUP BY year ORDER BY year DESC"
     
@@ -258,7 +274,7 @@ async def estadisticas_por_año():
 @app.get("/estadisticas/resumen")
 async def resumen_estadisticas():
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     
     # Total de escaneos
     cursor.execute("SELECT COUNT(*) as total FROM scans")
