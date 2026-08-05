@@ -22,30 +22,19 @@ Sistema completo para generar códigos QR personalizados y realizar seguimiento 
 
 ### Prerrequisitos
 - Python 3.8+
-- MySQL Server
 - Navegador web moderno
 
-### 1. Configurar Base de Datos
-```sql
-# Ejecutar el archivo scans.sql en MySQL
-mysql -u root -p < scans.sql
-```
-
-### 2. Instalar Dependencias Python
+### 1. Instalar Dependencias Python
 ```bash
-pip install fastapi uvicorn mysql-connector-python
+pip install fastapi "uvicorn[standard]"
 ```
 
-### 3. Configurar Conexión a Base de Datos
-Editar los archivos `main.py` y `estadisticas/main.py`:
-```python
-db_config = {
-    "host": "localhost",
-    "user": "tu_usuario",
-    "password": "tu_contraseña",  # Descomenta y configura
-    "database": "QRTracker"
-}
-```
+### 2. Configurar Conexión a Base de Datos
+El proyecto usa **SQLite** (no requiere servidor externo). La base de datos `qr_tracker.db`
+se crea automáticamente al arrancar el servidor principal.
+
+Opcionalmente puedes indicar una ruta diferente de la base de datos con la variable de entorno
+`QR_DB_PATH` (útil para pruebas):
 
 ## 🚀 Ejecución
 
@@ -61,8 +50,20 @@ uvicorn main:app --reload --port 8001
 ```
 
 ### Acceso a la Aplicación
-- **Generador QR**: `http://localhost:8000` (abrir index.html)
-- **Estadísticas**: `http://localhost:8001` (abrir estadisticas/registros.html)
+- **Generador QR**: `http://localhost:8000` (servido por el servidor principal)
+- **Estadísticas**: `http://localhost:8001` (servido por el servidor de estadísticas)
+
+> Ambos servidores sirven ahora su interfaz HTML directamente, ya no hace falta abrir
+> los archivos `.html` como `file://`.
+
+### Inicio (usando el Python del venv)
+```bash
+# Terminal 1 - generador (puerto 8000)
+./.venv/bin/python -m uvicorn main:app --reload --port 8000
+
+# Terminal 2 - estadísticas (puerto 8001)
+./.venv/bin/python -m uvicorn main:app --reload --port 8001
+```
 
 ## 📊 Funcionalidades de Estadísticas
 
@@ -155,6 +156,6 @@ QR/
 
 ---
 
-**Desarrollado con FastAPI, MySQL, Chart.js y Bootstrap 5**
+**Desarrollado con FastAPI, SQLite, Chart.js y Bootstrap 5**
 
 
