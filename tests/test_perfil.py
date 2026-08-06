@@ -102,7 +102,7 @@ def test_carnet_con_fondo_de_empresa(client, auth_headers):
     emp_id = crear_empleado(client, auth_headers).json()["id"]
     res = client.get(f"/carnet/{emp_id}")
     assert res.status_code == 200
-    assert "carnet_fondo" in res.text
+    assert "url('/uploads/" in res.text
 
 
 def test_config_empresa_redes_invalidas(client, auth_headers):

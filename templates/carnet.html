@@ -6,20 +6,28 @@
   <title>Carnet - {{NOMBRE}} {{APELLIDO}}</title>
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <style>
+    @page { size: 85.6mm 105mm; margin: 0; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: "Segoe UI", Roboto, Arial, sans-serif; background: #eef1f6; padding: 24px; }
-    .barra { max-width: 340px; margin: 0 auto 18px; display: flex; gap: 10px; }
-    .barra button { flex: 1; border: 0; border-radius: 8px; padding: 10px; font-weight: 600; cursor: pointer; font-size: 14px; }
+    html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { font-family: "Segoe UI", Roboto, Arial, sans-serif; background: #eef1f6; padding: 24px 24px 60px; overflow-x: hidden; }
+    .barra { max-width: 340px; margin: 0 auto 22px; display: flex; gap: 10px; }
+    .barra button { flex: 1; border: 0; border-radius: 8px; padding: 11px; font-weight: 600; cursor: pointer; font-size: 14px; }
     .btn-imprimir { background: #4da32f; color: #fff; }
     .btn-volver { background: #fff; color: #1c2733; border: 1px solid #d6dbe4; }
 
+    .escala {
+      transform: scale(1.8);
+      transform-origin: top center;
+    }
+
     .carnet {
       width: 85.6mm;
-      height: 90mm;
+      height: 105mm;
       margin: 0 auto;
       background: linear-gradient(135deg, #ffffff, #f4f7fc);
       background-image: {!CARNET_FONDO_CSS!};
-      background-size: cover;
+      background-size: contain;
+      background-repeat: no-repeat;
       background-position: center;
       border-radius: 10px;
       border: 1px solid #d8dee8;
@@ -42,41 +50,41 @@
     .carnet .top {
       width: 100%;
       text-align: center;
-      padding: 4.5mm 4mm 2mm;
+      padding: 3.5mm 4mm 1.5mm;
       min-height: 9mm;
     }
     .carnet .top .logo-empresa {
-      height: 10mm;
-      max-width: 55mm;
+      height: 18mm;
+      max-width: 72mm;
       object-fit: contain;
     }
     .carnet .top .nombre-empresa {
       font-weight: 700;
-      font-size: 4mm;
+      font-size: 4.2mm;
       color: #003362;
       letter-spacing: 0.3px;
     }
     .carnet .foto {
-      width: 24mm;
-      height: 24mm;
+      width: 26mm;
+      height: 26mm;
       border-radius: 50%;
       object-fit: cover;
-      margin: 3.5mm 0 3mm;
-      border: 0.7mm solid #ffffff;
+      margin: 4.5mm 0 2.5mm;
+      border: 0.8mm solid #ffffff;
       box-shadow: 0 1px 5px rgba(0,0,0,.25);
       background: #e4e8ef;
     }
-    .carnet .nombre { font-size: 4.6mm; font-weight: 800; color: #003362; text-align: center; }
-    .carnet .cedula { font-size: 3.2mm; color: #4da32f; font-weight: 700; margin-top: 1.4mm; }
-    .carnet .cargo { font-size: 3.2mm; color: #1D2A44; margin-top: 1mm; text-align: center; }
-    .carnet .qr { margin-top: 2.6mm; }
-    .carnet .qr canvas { width: 16mm; height: 16mm; display: block; }
+    .carnet .nombre { font-size: 4.8mm; font-weight: 800; color: #003362; text-align: center; margin-top: 1mm; }
+    .carnet .cedula { font-size: 3.3mm; color: #4da32f; font-weight: 700; margin-top: 1.2mm; }
+    .carnet .cargo { font-size: 3.3mm; color: #1D2A44; margin-top: 0.8mm; text-align: center; }
+    .carnet .qr { margin-top: 2mm; }
+    .carnet .qr canvas { width: 17mm; height: 17mm; display: block; }
 
     @media print {
       body { background: #fff; padding: 0; }
       .barra { display: none; }
+      .escala { transform: none; }
       .carnet { box-shadow: none; margin: 0 auto; border-radius: 0; border: none; }
-      @page { size: 85.6mm 90mm; margin: 0; }
     }
   </style>
 </head>
@@ -86,13 +94,15 @@
     <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>
   </div>
 
-  <div class="carnet">
-    <div class="top">{!EMPRESA_TOP_HTML!}</div>
-    <img class="foto" id="fotoEmpleado" alt="">
-    <div class="nombre">{{NOMBRE}} {{APELLIDO}}</div>
-    <div class="cedula">{{CEDULA}}</div>
-    <div class="cargo">{{CARGO}}</div>
-    <div class="qr"><canvas id="qrcode"></canvas></div>
+  <div class="escala">
+    <div class="carnet">
+      <div class="top">{!EMPRESA_TOP_HTML!}</div>
+      <img class="foto" id="fotoEmpleado" alt="">
+      <div class="nombre">{{NOMBRE}} {{APELLIDO}}</div>
+      <div class="cedula">{{CEDULA}}</div>
+      <div class="cargo">{{CARGO}}</div>
+      <div class="qr"><canvas id="qrcode"></canvas></div>
+    </div>
   </div>
 
   <script>

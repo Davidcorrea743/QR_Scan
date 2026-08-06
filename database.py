@@ -85,6 +85,10 @@ def _migrar_columnas(conn):
     if "carnet_fondo" not in columnas:
         cur.execute("ALTER TABLE empresa ADD COLUMN carnet_fondo TEXT")
         conn.commit()
+    columnas = [row["name"] for row in cur.execute("PRAGMA table_info(empresa)").fetchall()]
+    if "titulo" not in columnas:
+        cur.execute("ALTER TABLE empresa ADD COLUMN titulo TEXT")
+        conn.commit()
     cur.close()
 
 

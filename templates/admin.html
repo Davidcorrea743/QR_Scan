@@ -114,7 +114,7 @@
             '<td>' + esc(e.telefono) + '</td>' +
             '<td><div class="acciones">' +
             '<button class="btn btn-borde" onclick="location.href=\'/formulario?id=' + e.id + '\'">Editar</button>' +
-            '<button class="btn btn-borde" onclick="window.open(\'/carnet/' + e.id + '\')">Carnet</button>' +
+            '<button class="btn btn-borde" onclick="location.href=\'/carnet/' + e.id + '\'">Carnet</button>' +
             (esAdmin
               ? (e.activo
                 ? '<button class="btn btn-rojo" onclick="desactivar(' + e.id + ')">Desactivar</button>'

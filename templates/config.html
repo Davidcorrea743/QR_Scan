@@ -37,6 +37,11 @@
           <button type="button" class="btn btn-borde" style="margin-top:10px;" onclick="agregarRed()">+ Agregar red</button>
         </div>
         <div>
+          <label>Título de la empresa (logo/imagen para el carnet)</label>
+          <input type="file" id="titulo" accept="image/png,image/jpeg,image/webp">
+          <img id="previewTitulo" alt="" style="width:110px;height:44px;object-fit:contain;background:#f0f3f9;border-radius:8px;margin-top:10px;">
+        </div>
+        <div>
           <label>Logo (centro del QR)</label>
           <input type="file" id="logo" accept="image/png,image/jpeg,image/webp">
           <img id="previewLogo" alt="" style="width:80px;height:80px;object-fit:contain;background:#f0f3f9;border-radius:8px;margin-top:10px;">
@@ -128,9 +133,17 @@
           document.getElementById("previewCarnetFondo").src = "/uploads/" + encodeURIComponent(data.carnet_fondo);
           document.getElementById("previewCarnetFondo").dataset.actual = data.carnet_fondo;
         }
+        if (data.titulo) {
+          document.getElementById("previewTitulo").src = "/uploads/" + encodeURIComponent(data.titulo);
+          document.getElementById("previewTitulo").dataset.actual = data.titulo;
+        }
       }).catch(function () {});
     }
 
+    document.getElementById("titulo").addEventListener("change", function (e) {
+      var f = e.target.files[0];
+      if (f) { var r = new FileReader(); r.onload = function (ev) { document.getElementById("previewTitulo").src = ev.target.result; }; r.readAsDataURL(f); }
+    });
     document.getElementById("logo").addEventListener("change", function (e) {
       var f = e.target.files[0];
       if (f) { var r = new FileReader(); r.onload = function (ev) { document.getElementById("previewLogo").src = ev.target.result; }; r.readAsDataURL(f); }
@@ -151,6 +164,8 @@
       var logo = document.getElementById("logo").files[0];
       var fondo = document.getElementById("fondo").files[0];
       var carnetFondo = document.getElementById("carnetFondo").files[0];
+      var titulo = document.getElementById("titulo").files[0];
+      if (titulo) fd.append("titulo", titulo);
       if (logo) fd.append("logo", logo);
       if (fondo) fd.append("fondo", fondo);
       if (carnetFondo) fd.append("carnet_fondo", carnetFondo);

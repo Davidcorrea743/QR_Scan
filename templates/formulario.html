@@ -69,8 +69,8 @@
       <h2>✅ Empleado guardado</h2>
       <p style="color:#5b6472;">Puedes imprimir el carnet o ver el perfil público (lo que ve quien escanea el QR).</p>
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
-        <button class="btn btn-acento" onclick="window.open(URL_CARNET,'_blank')">Ver carnet imprimible</button>
-        <button class="btn btn-borde" onclick="window.open(URL_PERFIL,'_blank')">Ver perfil público</button>
+        <button class="btn btn-acento" onclick="location.href=URL_CARNET">Ver carnet imprimible</button>
+        <button class="btn btn-borde" onclick="location.href=URL_PERFIL">Ver perfil público</button>
         <button class="btn btn-borde" onclick="location.href='/admin'">Volver al panel</button>
       </div>
     </div>

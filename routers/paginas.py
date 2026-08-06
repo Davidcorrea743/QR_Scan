@@ -93,7 +93,7 @@ async def carnet_page(emp_id: int):
         if carnet_fondo
         else "linear-gradient(135deg, #ffffff, #f4f7fc)"
     )
-    logo = empresa.get("logo", "")
+    logo = empresa.get("titulo") or empresa.get("logo", "")
     if logo:
         empresa_top_html = (
             f'<img class="logo-empresa" src="/uploads/{logo}" alt="Logo de la empresa">'

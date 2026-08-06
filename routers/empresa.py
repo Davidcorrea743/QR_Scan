@@ -23,6 +23,7 @@ def obtener(user=Depends(require_admin)):
 def actualizar(
     nombre: str = Form(None),
     redes: str = Form(None),
+    titulo: UploadFile = File(None),
     logo: UploadFile = File(None),
     fondo: UploadFile = File(None),
     carnet_fondo: UploadFile = File(None),
@@ -42,6 +43,9 @@ def actualizar(
                 raise HTTPException(status_code=400, detail="redes debe ser una lista JSON")
             valores["redes"] = json.dumps(parsed, ensure_ascii=False)
 
+        if titulo:
+            nuevo_titulo = media.guardar_imagen(titulo, "titulo", normalizar=False)
+            valores["titulo"] = nuevo_titulo
         if logo:
             nuevo_logo = media.guardar_imagen(logo, "logo", normalizar=False)
             valores["logo"] = nuevo_logo
@@ -73,6 +77,8 @@ def actualizar(
             media.eliminar_archivo(existing["fondo"])
         if carnet_fondo and existing and existing["carnet_fondo"] and existing["carnet_fondo"] != nuevo_carnet_fondo:
             media.eliminar_archivo(existing["carnet_fondo"])
+        if titulo and existing and existing["titulo"] and existing["titulo"] != nuevo_titulo:
+            media.eliminar_archivo(existing["titulo"])
     finally:
         conn.close()
     return {"ok": True}
