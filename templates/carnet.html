@@ -4,89 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Carnet - {{NOMBRE}} {{APELLIDO}}</title>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-  <style>
-    @page { size: 85.6mm 105mm; margin: 0; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    body { font-family: "Segoe UI", Roboto, Arial, sans-serif; background: #eef1f6; padding: 24px 24px 60px; overflow-x: hidden; }
-    .barra { max-width: 340px; margin: 0 auto 22px; display: flex; gap: 10px; }
-    .barra button { flex: 1; border: 0; border-radius: 8px; padding: 11px; font-weight: 600; cursor: pointer; font-size: 14px; }
-    .btn-imprimir { background: #4da32f; color: #fff; }
-    .btn-volver { background: #fff; color: #1c2733; border: 1px solid #d6dbe4; }
-
-    .escala {
-      transform: scale(1.8);
-      transform-origin: top center;
-    }
-
-    .carnet {
-      width: 85.6mm;
-      height: 105mm;
-      margin: 0 auto;
-      background: linear-gradient(135deg, #ffffff, #f4f7fc);
-      background-image: {!CARNET_FONDO_CSS!};
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-      border-radius: 10px;
-      border: 1px solid #d8dee8;
-      box-shadow: 0 6px 20px rgba(0,51,98,.18);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      overflow: hidden;
-      position: relative;
-    }
-    .carnet::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: rgba(255,255,255,.82);
-      z-index: 0;
-    }
-    .carnet > * { position: relative; z-index: 1; }
-    .carnet .top {
-      width: 100%;
-      text-align: center;
-      padding: 3.5mm 4mm 1.5mm;
-      min-height: 9mm;
-    }
-    .carnet .top .logo-empresa {
-      height: 18mm;
-      max-width: 72mm;
-      object-fit: contain;
-    }
-    .carnet .top .nombre-empresa {
-      font-weight: 700;
-      font-size: 4.2mm;
-      color: #003362;
-      letter-spacing: 0.3px;
-    }
-    .carnet .foto {
-      width: 26mm;
-      height: 26mm;
-      border-radius: 50%;
-      object-fit: cover;
-      margin: 4.5mm 0 2.5mm;
-      border: 0.8mm solid #ffffff;
-      box-shadow: 0 1px 5px rgba(0,0,0,.25);
-      background: #e4e8ef;
-    }
-    .carnet .nombre { font-size: 4.8mm; font-weight: 800; color: #003362; text-align: center; margin-top: 1mm; }
-    .carnet .cedula { font-size: 3.3mm; color: #4da32f; font-weight: 700; margin-top: 1.2mm; }
-    .carnet .cargo { font-size: 3.3mm; color: #1D2A44; margin-top: 0.8mm; text-align: center; }
-    .carnet .qr { margin-top: 2mm; }
-    .carnet .qr canvas { width: 17mm; height: 17mm; display: block; }
-
-    @media print {
-      body { background: #fff; padding: 0; }
-      .barra { display: none; }
-      .escala { transform: none; }
-      .carnet { box-shadow: none; margin: 0 auto; border-radius: 0; border: none; }
-    }
-  </style>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <link rel="stylesheet" href="/static/carnet.css">
 </head>
 <body>
   <div class="barra">
@@ -95,7 +14,7 @@
   </div>
 
   <div class="escala">
-    <div class="carnet">
+    <div class="carnet" style="background-image: {!CARNET_FONDO_CSS!};">
       <div class="top">{!EMPRESA_TOP_HTML!}</div>
       <img class="foto" id="fotoEmpleado" alt="">
       <div class="nombre">{{NOMBRE}} {{APELLIDO}}</div>

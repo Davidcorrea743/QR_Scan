@@ -92,3 +92,6 @@ canvas {
   background: #fff;
   padding: 10px;
 }
+
+/* ======== Enlace volver ======== */
+.volver-link { color: #0d6efd; }

@@ -23,14 +23,14 @@
 
   <div class="contenido">
     <div class="tarjeta">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+      <div class="flexbetween">
         <div>
           <h2>Empleados</h2>
-          <p style="margin:0; color:#5b6472; font-size:14px;" id="contadorEmpleados"></p>
+          <p class="m0 txtmuted-sm" id="contadorEmpleados"></p>
         </div>
-        <div style="display:flex; gap:8px;">
-          <label class="btn btn-borde" style="margin:0;">
-            <input type="checkbox" id="verInactivos" onchange="cargarEmpleados()" style="width:auto;"> Ver inactivos
+        <div class="flexbtn">
+          <label class="btn btn-borde m0">
+            <input type="checkbox" id="verInactivos" onchange="cargarEmpleados()" class="wauto"> Ver inactivos
           </label>
           <button class="btn btn-verde oculto" id="btnNuevo" onclick="location.href='/formulario'">+ Nuevo empleado</button>
         </div>
@@ -38,7 +38,7 @@
 
       <div id="mensaje" class="error oculto"></div>
 
-      <div style="overflow-x:auto; margin-top:16px;">
+      <div class="ovxauto mt16">
         <table class="tabla">
           <thead>
             <tr>
@@ -59,11 +59,11 @@
     </div>
 
     <div class="tarjeta oculto" id="cardUsuarios">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="flexbetween">
         <h2>Usuarios del sistema</h2>
         <button class="btn btn-primario" onclick="abrirNuevoUsuario()">+ Crear usuario</button>
       </div>
-      <div style="overflow-x:auto; margin-top:16px;">
+      <div class="ovxauto mt16">
         <table class="tabla">
           <thead>
             <tr><th>Usuario</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr>
@@ -159,14 +159,14 @@
       var modal = document.getElementById("modal");
       modal.classList.remove("oculto");
       modal.innerHTML =
-        '<div style="position:fixed; inset:0; background:rgba(10,20,40,.5); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50;">' +
-        '<div class="tarjeta" style="width:100%; max-width:400px; margin:0;">' +
+        '<div class="modal-overlay">' +
+        '<div class="tarjeta modal-panel">' +
         '<h2>Nuevo usuario</h2>' +
-        '<div style="margin-bottom:12px;"><label>Usuario</label><input id="nu_user" required></div>' +
-        '<div style="margin-bottom:12px;"><label>Contraseña</label><input id="nu_pass" type="password" minlength="6" required></div>' +
-        '<div style="margin-bottom:16px;"><label>Rol</label>' +
+        '<div class="mb12"><label>Usuario</label><input id="nu_user" required></div>' +
+        '<div class="mb12"><label>Contraseña</label><input id="nu_pass" type="password" minlength="6" required></div>' +
+        '<div class="mb16"><label>Rol</label>' +
         '<select id="nu_rol"><option value="editor">Editor</option><option value="admin">Administrador</option></select></div>' +
-        '<div style="display:flex; gap:8px; justify-content:flex-end;">' +
+        '<div class="modal-actions">' +
         '<button class="btn btn-borde" onclick="document.getElementById(\'modal\').classList.add(\'oculto\')">Cancelar</button>' +
         '<button class="btn btn-primario" onclick="crearUsuario()">Crear</button>' +
         '</div></div></div>';
@@ -204,13 +204,13 @@
       var modal = document.getElementById("modal");
       modal.classList.remove("oculto");
       modal.innerHTML =
-        '<div style="position:fixed; inset:0; background:rgba(10,20,40,.5); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50;">' +
-        '<div class="tarjeta" style="width:100%; max-width:380px; margin:0;">' +
+        '<div class="modal-overlay">' +
+        '<div class="tarjeta modal-panel-sm">' +
         '<h2>Cambiar contraseña</h2>' +
-        '<div style="margin-bottom:12px;"><label>Contraseña actual</label><input id="cp_actual" type="password" required></div>' +
-        '<div style="margin-bottom:12px;"><label>Nueva contraseña</label><input id="cp_nueva" type="password" minlength="6" required></div>' +
-        '<div style="margin-bottom:16px;"><label>Repite la nueva</label><input id="cp_nueva2" type="password" minlength="6" required></div>' +
-        '<div style="display:flex; gap:8px; justify-content:flex-end;">' +
+        '<div class="mb12"><label>Contraseña actual</label><input id="cp_actual" type="password" required></div>' +
+        '<div class="mb12"><label>Nueva contraseña</label><input id="cp_nueva" type="password" minlength="6" required></div>' +
+        '<div class="mb16"><label>Repite la nueva</label><input id="cp_nueva2" type="password" minlength="6" required></div>' +
+        '<div class="modal-actions">' +
         '<button class="btn btn-borde" onclick="document.getElementById(\'modal\').classList.add(\'oculto\')">Cancelar</button>' +
         '<button class="btn btn-acento" onclick="guardarPassword()">Guardar</button>' +
         '</div></div></div>';

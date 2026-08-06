@@ -21,9 +21,9 @@
   </header>
 
   <div class="contenido">
-    <div class="tarjeta" style="max-width:760px; margin:0 auto;">
+    <div class="tarjeta tarjeta-centrada">
       <h2>Datos de la empresa</h2>
-      <p style="color:#5b6472; font-size:14px;">Estos datos se muestran en el carnet y en la página que ven quienes escanean el QR.</p>
+      <p class="txtmuted-sm">Estos datos se muestran en el carnet y en la página que ven quienes escanean el QR.</p>
       <div id="mensaje" class="aviso oculto"></div>
 
       <div class="form-grid">
@@ -34,31 +34,31 @@
         <div class="full">
           <label>Redes sociales</label>
           <div id="redesList"></div>
-          <button type="button" class="btn btn-borde" style="margin-top:10px;" onclick="agregarRed()">+ Agregar red</button>
+          <button type="button" class="btn btn-borde mt10" onclick="agregarRed()">+ Agregar red</button>
         </div>
         <div>
           <label>Título de la empresa (logo/imagen para el carnet)</label>
           <input type="file" id="titulo" accept="image/png,image/jpeg,image/webp">
-          <img id="previewTitulo" alt="" style="width:110px;height:44px;object-fit:contain;background:#f0f3f9;border-radius:8px;margin-top:10px;">
+          <img id="previewTitulo" alt="" class="preview preview-titulo">
         </div>
         <div>
           <label>Logo (centro del QR)</label>
           <input type="file" id="logo" accept="image/png,image/jpeg,image/webp">
-          <img id="previewLogo" alt="" style="width:80px;height:80px;object-fit:contain;background:#f0f3f9;border-radius:8px;margin-top:10px;">
+          <img id="previewLogo" alt="" class="preview preview-logo">
         </div>
         <div>
           <label>Imagen de fondo (perfil público)</label>
           <input type="file" id="fondo" accept="image/png,image/jpeg,image/webp">
-          <img id="previewFondo" alt="" style="width:120px;height:80px;object-fit:cover;background:#f0f3f9;border-radius:8px;margin-top:10px;">
+          <img id="previewFondo" alt="" class="preview preview-fondo">
         </div>
         <div>
           <label>Imagen de fondo del carnet</label>
           <input type="file" id="carnetFondo" accept="image/png,image/jpeg,image/webp">
-          <img id="previewCarnetFondo" alt="" style="width:120px;height:80px;object-fit:cover;background:#f0f3f9;border-radius:8px;margin-top:10px;">
+          <img id="previewCarnetFondo" alt="" class="preview preview-fondo">
         </div>
       </div>
 
-      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+      <div class="flexend mt20">
         <button class="btn btn-borde" onclick="location.href='/admin'">Cancelar</button>
         <button class="btn btn-verde" onclick="guardar()">Guardar configuración</button>
       </div>
@@ -80,17 +80,15 @@
         ["facebook", "Facebook"], ["tiktok", "TikTok"], ["web", "Sitio web"]
       ];
       var div = document.createElement("div");
-      div.style.display = "flex";
-      div.style.gap = "8px";
-      div.style.marginBottom = "8px";
+      div.className = "flexbtn mb8";
       div.innerHTML =
-        '<select style="max-width:160px;">' +
+        '<select class="red-select">' +
         labels.map(function (l) {
           return '<option value="' + l[0] + '"' + (red.label === l[0] ? " selected" : "") + ">" + l[1] + "</option>";
         }).join("") +
         '</select>' +
         '<input type="url" placeholder="https://..." value="' + esc(red.url) + '">' +
-        '<button type="button" class="btn btn-rojo" style="padding:0 12px;">✕</button>';
+        '<button type="button" class="btn btn-rojo btn-xs">✕</button>';
       div.querySelector("button").addEventListener("click", function () { div.remove(); });
       return div;
     }

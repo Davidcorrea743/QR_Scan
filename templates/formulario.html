@@ -23,7 +23,7 @@
   <div class="contenido">
     <div class="tarjeta" id="formCard">
       <h2 id="tituloTarjeta">Nuevo empleado</h2>
-      <p style="color:#5b6472; font-size:14px; margin-top:0;" id="subtitulo"></p>
+      <p class="txtmuted-sm mt0" id="subtitulo"></p>
       <div id="mensaje" class="error oculto"></div>
 
       <form id="formEmpleado">
@@ -55,10 +55,10 @@
           <div class="full">
             <label>Foto del empleado</label>
             <input type="file" id="foto" accept="image/png,image/jpeg,image/webp">
-            <img id="previewFoto" alt="" style="width:90px;height:90px;border-radius:50%;object-fit:cover;background:#e4e8ef;margin-top:10px;">
+            <img id="previewFoto" alt="" class="foto-preview">
           </div>
         </div>
-        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+        <div class="flexend mt20">
           <button type="button" class="btn btn-borde" onclick="location.href='/admin'">Cancelar</button>
           <button type="submit" class="btn btn-verde" id="btnGuardar">Guardar</button>
         </div>
@@ -67,8 +67,8 @@
 
     <div class="tarjeta oculto" id="exitoCard">
       <h2>✅ Empleado guardado</h2>
-      <p style="color:#5b6472;">Puedes imprimir el carnet o ver el perfil público (lo que ve quien escanea el QR).</p>
-      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
+      <p class="txtmuted">Puedes imprimir el carnet o ver el perfil público (lo que ve quien escanea el QR).</p>
+      <div class="flexwrap mt16">
         <button class="btn btn-acento" onclick="location.href=URL_CARNET">Ver carnet imprimible</button>
         <button class="btn btn-borde" onclick="location.href=URL_PERFIL">Ver perfil público</button>
         <button class="btn btn-borde" onclick="location.href='/admin'">Volver al panel</button>
