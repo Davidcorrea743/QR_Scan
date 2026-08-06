@@ -1,0 +1,151 @@
+:root {
+  --primario: #0d6efd;
+  --primario-oscuro: #0a58ca;
+  --acento: #fd7e14;
+  --verde: #198754;
+  --gris-fondo: #f4f6fb;
+  --gris-texto: #5b6472;
+  --sombra: 0 2px 10px rgba(16, 42, 82, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--gris-fondo);
+  color: #1c2733;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-primario { background: var(--primario); color: #fff; }
+.btn-primario:hover { background: var(--primario-oscuro); }
+.btn-acento { background: var(--acento); color: #fff; }
+.btn-acento:hover { background: #e36f0d; }
+.btn-verde { background: var(--verde); color: #fff; }
+.btn-verde:hover { background: #157347; }
+.btn-borde { background: #fff; color: #1c2733; border: 1px solid #d6dbe4; }
+.btn-borde:hover { background: #eef1f6; }
+.btn-rojo { background: #dc3545; color: #fff; }
+.btn-rojo:hover { background: #c02a39; }
+
+input, select, textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #ccd3dd;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fff;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primario);
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+}
+label { font-weight: 600; font-size: 13px; color: var(--gris-texto); display: block; margin-bottom: 6px; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-grid .full { grid-column: 1 / -1; }
+@media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
+
+.panel-header {
+  background: #fff;
+  border-bottom: 1px solid #e4e8ef;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.panel-header .marca { display: flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 700; }
+.panel-header .marca img { height: 36px; }
+.panel-header .usuario { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.rol-badge {
+  background: #e7f1ff;
+  color: var(--primario);
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.contenido { max-width: 1100px; margin: 24px auto; padding: 0 20px; }
+
+.tarjeta {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: var(--sombra);
+  padding: 22px;
+  margin-bottom: 22px;
+}
+.tarjeta h2 { margin-top: 0; font-size: 20px; }
+.tarjeta h3 { font-size: 16px; margin: 4px 0 14px; }
+
+.tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tabla th {
+  text-align: left;
+  padding: 10px 12px;
+  background: #f0f3f9;
+  color: var(--gris-texto);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.tabla td { padding: 10px 12px; border-top: 1px solid #eef1f6; vertical-align: middle; }
+.tabla tr.inactivo { opacity: 0.55; }
+.foto-mini {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #e4e8ef;
+  display: inline-block;
+}
+.acciones { display: flex; gap: 6px; flex-wrap: wrap; }
+.acciones .btn { padding: 6px 12px; font-size: 13px; }
+
+.aviso, .error { border-radius: 8px; padding: 10px 14px; font-size: 14px; margin-bottom: 14px; }
+.aviso { background: #d1e7dd; color: #0f5132; }
+.error { background: #f8d7da; color: #842029; }
+
+.login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #eef4ff, #fdf1e3);
+}
+.login-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(16, 42, 82, 0.12);
+  padding: 36px;
+  width: 100%;
+  max-width: 380px;
+}
+.login-card .marca { text-align: center; margin-bottom: 22px; }
+.login-card .marca img { height: 56px; }
+.login-card h1 { font-size: 20px; margin: 10px 0 2px; }
+.login-card p { color: var(--gris-texto); margin: 0 0 20px; font-size: 14px; }
+
+.oculto { display: none !important; }
+.cargando { text-align: center; color: var(--gris-texto); padding: 24px; }

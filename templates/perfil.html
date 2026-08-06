@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{NOMBRE}} {{APELLIDO}} - {{EMPRESA_NOMBRE}}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: #003362;
+      background-image: {!FONDO_CSS!};
+      background-size: cover;
+      background-position: center;
+    }
+    .velo {
+      position: fixed; inset: 0;
+      background: linear-gradient(160deg, rgba(0,51,98,.82), rgba(0,69,135,.72));
+    }
+    .tarjeta {
+      position: relative;
+      width: 100%;
+      max-width: 390px;
+      background: #FFFFFF;
+      border-radius: 18px;
+      box-shadow: 0 16px 50px rgba(0,41,80,.4);
+      padding: 30px 26px 24px;
+      text-align: center;
+      border-top: 5px solid #4da32f;
+    }
+    .logo-empresa { height: 48px; margin-bottom: 14px; object-fit: contain; }
+    .foto {
+      width: 128px; height: 128px; border-radius: 50%;
+      object-fit: cover; border: 4px solid #FFFFFF;
+      box-shadow: 0 4px 14px rgba(0,41,80,.25);
+      background: #e4e8ef;
+      margin: 0 auto 16px; display: block;
+    }
+    .nombre { font-size: 22px; font-weight: 800; color: #003362; }
+    .cargo { color: #4da32f; font-weight: 700; font-size: 15px; margin-top: 3px; }
+    .empresa-nombre { color: #1D2A44; font-size: 13px; margin-top: 4px; opacity: .8; }
+    .separador { height: 1px; background: #e6eaf2; margin: 18px 0; }
+
+    .acciones { display: flex; gap: 12px; justify-content: center; }
+    .icono-boton {
+      width: 52px; height: 52px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #FFFFFF; text-decoration: none; transition: transform .12s, opacity .12s;
+    }
+    .icono-boton svg { width: 26px; height: 26px; fill: currentColor; }
+    .icono-boton:hover { transform: translateY(-2px); opacity: .92; }
+    .btn-whatsapp { background: #25d366; }
+    .btn-correo { background: #003362; }
+
+    .redes { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .icono-red {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: #eef2f9; color: #003362;
+      display: flex; align-items: center; justify-content: center;
+      text-decoration: none; transition: transform .12s, background .12s, color .12s;
+    }
+    .icono-red svg { width: 22px; height: 22px; fill: currentColor; }
+    .icono-red:hover { background: #4da32f; color: #FFFFFF; transform: translateY(-2px); }
+    .pie { color: #8f9bb0; font-size: 11px; margin-top: 18px; }
+  </style>
+</head>
+<body>
+  <div class="velo"></div>
+  <div class="tarjeta">
+    <img class="logo-empresa" id="logoEmpresa" alt="Logo de {{EMPRESA_NOMBRE}}">
+    <img class="foto" id="fotoEmpleado" alt="Foto del trabajador">
+    <div class="nombre">{{NOMBRE}} {{APELLIDO}}</div>
+    <div class="cargo">{{CARGO}}</div>
+    <div class="empresa-nombre">{{EMPRESA_NOMBRE}}</div>
+
+    <div class="separador"></div>
+    <div class="acciones">
+      <a class="icono-boton btn-whatsapp" id="linkWhatsapp" target="_blank" rel="noopener" aria-label="WhatsApp" title="WhatsApp">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm0 18.15c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.264 8.264 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24 2.2 0 4.27.86 5.82 2.42a8.183 8.183 0 0 1 2.41 5.83c.02 4.54-3.68 8.23-8.22 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43s.17-.25.25-.41c.08-.17.04-.31-.02-.43s-.56-1.34-.76-1.84c-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18s-.22-.16-.47-.28z"/>
+        </svg>
+      </a>
+      <a class="icono-boton btn-correo" id="linkCorreo" aria-label="Correo" title="Correo">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+        </svg>
+      </a>
+    </div>
+    <div class="separador"></div>
+    <div class="redes">{!REDES!}</div>
+    <div class="pie">Escaneado con QR de {{EMPRESA_NOMBRE}}</div>
+  </div>
+
+  <script>
+    var foto = "{{FOTO}}";
+    var logo = "{{EMPRESA_LOGO}}";
+    var correo = "{{CORREO}}";
+    var telefono = "{{TELEFONO}}";
+
+    if (foto) { document.getElementById("fotoEmpleado").src = "/uploads/" + encodeURIComponent(foto); }
+    if (logo) { document.getElementById("logoEmpresa").src = "/uploads/" + encodeURIComponent(logo); }
+    else { document.getElementById("logoEmpresa").style.display = "none"; }
+
+    var wa = document.getElementById("linkWhatsapp");
+    if (telefono) {
+      var num = telefono.replace(/[^0-9]/g, "");
+      wa.href = "https://wa.me/" + num;
+    } else {
+      wa.style.display = "none";
+    }
+
+    var co = document.getElementById("linkCorreo");
+    if (correo) { co.href = "mailto:" + correo; }
+    else { co.style.display = "none"; }
+
+    try {
+      fetch("{{BASE_URL}}" + "/scan", { mode: "no-cors" });
+    } catch (e) {}
+  </script>
+</body>
+</html>

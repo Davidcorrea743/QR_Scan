@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+PyJWT
+python-multipart
+Pillow
+httpx
+pytest

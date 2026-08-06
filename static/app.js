@@ -1,3 +1,5 @@
+var LOGO_SRC = "/static/logo Dimsop_Isotipo";
+
 function generateQR() {
   const text = document.getElementById("text").value;
   const canvas = document.getElementById("qrcode");
@@ -5,7 +7,7 @@ function generateQR() {
 
   QRCode.toCanvas(
     canvas,
-    text || "http://127.0.0.1:8000/scan",   // 🔹 Aquí se registra el escaneo
+    text || "http://127.0.0.1:8000/scan",
     {
       width: size,
       margin: parseInt(document.getElementById("margin").value),
@@ -23,7 +25,7 @@ function generateQR() {
 
       const ctx = canvas.getContext("2d");
       const logo = new Image();
-      logo.src = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjBmOwBmeJNIY9k9MseUafoJNNDPMVAwPFHAzb7tqiLfytLx9rxe6TsCOGHcOkDb73CD989HW1qcXQCVk3DChOtNr6Us291QpLuOu8FeDsSK7IVXsgI6ZFthCDSRXT5MQNgJw0pxUyFID0cP47Bb0Xy8Z_J-Z4MWOkCK4cpOVyAvJFVAU0JlDniJmsAd4nc/s16000/Logo-SENA.png";
+      logo.src = LOGO_SRC;
 
       logo.onload = function () {
         const logoSize = size * 0.2;
@@ -54,17 +56,15 @@ function downloadQR() {
   }
 
   try {
-    // Método alternativo más compatible
     const dataURL = canvas.toDataURL("image/png");
     const link = document.createElement("a");
     link.href = dataURL;
     link.download = `codigo-qr-${new Date().getTime()}.png`;
-    
-    // Asegurar compatibilidad con diferentes navegadores
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     console.log("✅ QR descargado exitosamente");
   } catch (error) {
     console.error("Error al descargar QR:", error);

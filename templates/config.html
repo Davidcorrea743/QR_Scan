@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuración empresa - Carnet QR</title>
+  <link rel="stylesheet" href="/static/panel.css">
+</head>
+<body>
+  <header class="panel-header">
+    <div class="marca">
+      <img src="/static/logo Dimsop_Isotipo.png" alt="Logo">
+      <span>Configuración de la empresa</span>
+    </div>
+    <div class="usuario">
+      <span id="nombreUsuario"></span>
+      <span class="rol-badge">admin</span>
+      <button class="btn btn-borde" onclick="location.href='/admin'">← Volver al panel</button>
+      <button class="btn btn-rojo" onclick="logout()">Salir</button>
+    </div>
+  </header>
+
+  <div class="contenido">
+    <div class="tarjeta" style="max-width:760px; margin:0 auto;">
+      <h2>Datos de la empresa</h2>
+      <p style="color:#5b6472; font-size:14px;">Estos datos se muestran en el carnet y en la página que ven quienes escanean el QR.</p>
+      <div id="mensaje" class="aviso oculto"></div>
+
+      <div class="form-grid">
+        <div class="full">
+          <label>Nombre de la empresa</label>
+          <input type="text" id="nombre" placeholder="Nombre de la empresa">
+        </div>
+        <div class="full">
+          <label>Redes sociales</label>
+          <div id="redesList"></div>
+          <button type="button" class="btn btn-borde" style="margin-top:10px;" onclick="agregarRed()">+ Agregar red</button>
+        </div>
+        <div>
+          <label>Logo (centro del QR)</label>
+          <input type="file" id="logo" accept="image/png,image/jpeg,image/webp">
+          <img id="previewLogo" alt="" style="width:80px;height:80px;object-fit:contain;background:#f0f3f9;border-radius:8px;margin-top:10px;">
+        </div>
+        <div>
+          <label>Imagen de fondo (perfil público)</label>
+          <input type="file" id="fondo" accept="image/png,image/jpeg,image/webp">
+          <img id="previewFondo" alt="" style="width:120px;height:80px;object-fit:cover;background:#f0f3f9;border-radius:8px;margin-top:10px;">
+        </div>
+        <div>
+          <label>Imagen de fondo del carnet</label>
+          <input type="file" id="carnetFondo" accept="image/png,image/jpeg,image/webp">
+          <img id="previewCarnetFondo" alt="" style="width:120px;height:80px;object-fit:cover;background:#f0f3f9;border-radius:8px;margin-top:10px;">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+        <button class="btn btn-borde" onclick="location.href='/admin'">Cancelar</button>
+        <button class="btn btn-verde" onclick="guardar()">Guardar configuración</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/panel.js"></script>
+  <script>
+    if (!requiereLogin()) {}
+    if (!esAdmin()) { window.location.href = "/admin"; }
+
+    document.getElementById("nombreUsuario").textContent = getUsername();
+
+    var redesGuardadas = [];
+
+    function filaRed(red) {
+      var labels = [
+        ["linkedin", "LinkedIn"], ["twitter", "X (Twitter)"], ["instagram", "Instagram"],
+        ["facebook", "Facebook"], ["tiktok", "TikTok"], ["web", "Sitio web"]
+      ];
+      var div = document.createElement("div");
+      div.style.display = "flex";
+      div.style.gap = "8px";
+      div.style.marginBottom = "8px";
+      div.innerHTML =
+        '<select style="max-width:160px;">' +
+        labels.map(function (l) {
+          return '<option value="' + l[0] + '"' + (red.label === l[0] ? " selected" : "") + ">" + l[1] + "</option>";
+        }).join("") +
+        '</select>' +
+        '<input type="url" placeholder="https://..." value="' + esc(red.url) + '">' +
+        '<button type="button" class="btn btn-rojo" style="padding:0 12px;">✕</button>';
+      div.querySelector("button").addEventListener("click", function () { div.remove(); });
+      return div;
+    }
+
+    function renderRedes() {
+      var cont = document.getElementById("redesList");
+      cont.innerHTML = "";
+      redesGuardadas.forEach(function (r) { cont.appendChild(filaRed(r)); });
+    }
+
+    function agregarRed() {
+      document.getElementById("redesList").appendChild(filaRed({ label: "linkedin", url: "" }));
+    }
+
+    function leerRedes() {
+      var filas = document.querySelectorAll("#redesList > div");
+      return Array.from(filas).map(function (f) {
+        return { label: f.querySelector("select").value, url: f.querySelector("input").value.trim() };
+      }).filter(function (r) { return r.url; });
+    }
+
+    function cargar() {
+      api("/api/empresa").then(function (data) {
+        document.getElementById("nombre").value = data.nombre || "";
+        var redesRaw = data.redes;
+        if (typeof redesRaw === "string") {
+          try { redesRaw = JSON.parse(redesRaw); } catch (e) { redesRaw = []; }
+        }
+        redesGuardadas = Array.isArray(redesRaw) ? redesRaw : [];
+        renderRedes();
+        if (data.logo) {
+          document.getElementById("previewLogo").src = "/uploads/" + encodeURIComponent(data.logo);
+          document.getElementById("previewLogo").dataset.actual = data.logo;
+        }
+        if (data.fondo) {
+          document.getElementById("previewFondo").src = "/uploads/" + encodeURIComponent(data.fondo);
+          document.getElementById("previewFondo").dataset.actual = data.fondo;
+        }
+        if (data.carnet_fondo) {
+          document.getElementById("previewCarnetFondo").src = "/uploads/" + encodeURIComponent(data.carnet_fondo);
+          document.getElementById("previewCarnetFondo").dataset.actual = data.carnet_fondo;
+        }
+      }).catch(function () {});
+    }
+
+    document.getElementById("logo").addEventListener("change", function (e) {
+      var f = e.target.files[0];
+      if (f) { var r = new FileReader(); r.onload = function (ev) { document.getElementById("previewLogo").src = ev.target.result; }; r.readAsDataURL(f); }
+    });
+    document.getElementById("fondo").addEventListener("change", function (e) {
+      var f = e.target.files[0];
+      if (f) { var r = new FileReader(); r.onload = function (ev) { document.getElementById("previewFondo").src = ev.target.result; }; r.readAsDataURL(f); }
+    });
+    document.getElementById("carnetFondo").addEventListener("change", function (e) {
+      var f = e.target.files[0];
+      if (f) { var r = new FileReader(); r.onload = function (ev) { document.getElementById("previewCarnetFondo").src = ev.target.result; }; r.readAsDataURL(f); }
+    });
+
+    function guardar() {
+      var fd = new FormData();
+      fd.append("nombre", document.getElementById("nombre").value);
+      fd.append("redes", JSON.stringify(leerRedes()));
+      var logo = document.getElementById("logo").files[0];
+      var fondo = document.getElementById("fondo").files[0];
+      var carnetFondo = document.getElementById("carnetFondo").files[0];
+      if (logo) fd.append("logo", logo);
+      if (fondo) fd.append("fondo", fondo);
+      if (carnetFondo) fd.append("carnet_fondo", carnetFondo);
+
+      api("/api/empresa", { method: "PUT", body: fd }).then(function () {
+        var msg = document.getElementById("mensaje");
+        msg.textContent = "Configuración guardada correctamente.";
+        msg.classList.remove("oculto");
+        setTimeout(function () { msg.classList.add("oculto"); }, 3500);
+      }).catch(function (err) {
+        var msg = document.getElementById("mensaje");
+        msg.classList.remove("aviso");
+        msg.classList.add("error");
+        msg.textContent = err.message;
+      });
+    }
+
+    cargar();
+  </script>
+</body>
+</html>

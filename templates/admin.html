@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel - Carnet QR</title>
+  <link rel="stylesheet" href="/static/panel.css">
+</head>
+<body>
+  <header class="panel-header">
+    <div class="marca">
+      <img src="/static/logo Dimsop_Isotipo.png" alt="Logo">
+      <span>Panel de Empleados</span>
+    </div>
+    <div class="usuario">
+      <span id="nombreUsuario"></span>
+      <span class="rol-badge" id="rolUsuario"></span>
+      <button class="btn btn-borde" onclick="cambiarPassword()">Cambiar contraseña</button>
+      <button class="btn btn-borde oculto" id="btnConfig" onclick="location.href='/config'">Configuración empresa</button>
+      <button class="btn btn-rojo" onclick="logout()">Salir</button>
+    </div>
+  </header>
+
+  <div class="contenido">
+    <div class="tarjeta">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+          <h2>Empleados</h2>
+          <p style="margin:0; color:#5b6472; font-size:14px;" id="contadorEmpleados"></p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <label class="btn btn-borde" style="margin:0;">
+            <input type="checkbox" id="verInactivos" onchange="cargarEmpleados()" style="width:auto;"> Ver inactivos
+          </label>
+          <button class="btn btn-verde oculto" id="btnNuevo" onclick="location.href='/formulario'">+ Nuevo empleado</button>
+        </div>
+      </div>
+
+      <div id="mensaje" class="error oculto"></div>
+
+      <div style="overflow-x:auto; margin-top:16px;">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Foto</th>
+              <th>Nombre</th>
+              <th>Cédula</th>
+              <th>Cargo</th>
+              <th>Correo</th>
+              <th>Teléfono</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tablaBody">
+            <tr><td colspan="7" class="cargando">Cargando empleados...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tarjeta oculto" id="cardUsuarios">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Usuarios del sistema</h2>
+        <button class="btn btn-primario" onclick="abrirNuevoUsuario()">+ Crear usuario</button>
+      </div>
+      <div style="overflow-x:auto; margin-top:16px;">
+        <table class="tabla">
+          <thead>
+            <tr><th>Usuario</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="tablaUsuarios">
+            <tr><td colspan="4" class="cargando">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal" class="oculto"></div>
+
+  <script src="/static/panel.js"></script>
+  <script>
+    if (!requiereLogin()) {}
+
+    var esAdmin = getRol() === "admin";
+
+    function mostrarUsuario() {
+      document.getElementById("nombreUsuario").textContent = getUsername();
+      document.getElementById("rolUsuario").textContent = getRol();
+      document.getElementById("btnConfig").classList.toggle("oculto", !esAdmin);
+      document.getElementById("btnNuevo").classList.toggle("oculto", !esAdmin);
+      document.getElementById("cardUsuarios").classList.toggle("oculto", !esAdmin);
+    }
+
+    function cargarEmpleados() {
+      var incluir = document.getElementById("verInactivos").checked ? 1 : 0;
+      var url = "/api/empleados" + (esAdmin ? "?incluir_inactivos=" + incluir : "");
+      api(url).then(function (data) {
+        var body = document.getElementById("tablaBody");
+        document.getElementById("contadorEmpleados").textContent =
+          data.empleados.length + " empleados";
+        if (!data.empleados.length) {
+          body.innerHTML = '<tr><td colspan="7" class="cargando">No hay empleados registrados.</td></tr>';
+          return;
+        }
+        body.innerHTML = data.empleados.map(function (e) {
+          var foto = e.foto ? '/uploads/' + encodeURIComponent(e.foto) : '';
+          return '<tr class="' + (e.activo ? '' : 'inactivo') + '">' +
+            '<td><img class="foto-mini" src="' + esc(foto) + '" alt=""></td>' +
+            '<td>' + esc(e.nombre) + ' ' + esc(e.apellido) + '</td>' +
+            '<td>' + esc(e.cedula) + '</td>' +
+            '<td>' + esc(e.cargo) + '</td>' +
+            '<td>' + esc(e.correo) + '</td>' +
+            '<td>' + esc(e.telefono) + '</td>' +
+            '<td><div class="acciones">' +
+            '<button class="btn btn-borde" onclick="location.href=\'/formulario?id=' + e.id + '\'">Editar</button>' +
+            '<button class="btn btn-borde" onclick="window.open(\'/carnet/' + e.id + '\')">Carnet</button>' +
+            (esAdmin
+              ? (e.activo
+                ? '<button class="btn btn-rojo" onclick="desactivar(' + e.id + ')">Desactivar</button>'
+                : '<button class="btn btn-verde" onclick="restaurar(' + e.id + ')">Reactivar</button>')
+              : '') +
+            '</div></td></tr>';
+        }).join("");
+      }).catch(function (err) {
+        mostrarError(err.message);
+      });
+    }
+
+    function desactivar(id) {
+      if (!confirm("¿Desactivar este empleado? Su QR dejará de mostrar el perfil.")) return;
+      api("/api/empleados/" + id, { method: "DELETE" }).then(function () {
+        document.getElementById("verInactivos").checked = true;
+        cargarEmpleados();
+      }).catch(mostrarError);
+    }
+
+    function restaurar(id) {
+      api("/api/empleados/" + id + "/restaurar", { method: "POST" }).then(cargarEmpleados).catch(mostrarError);
+    }
+
+    function cargarUsuarios() {
+      api("/api/usuarios").then(function (data) {
+        var body = document.getElementById("tablaUsuarios");
+        body.innerHTML = data.usuarios.map(function (u) {
+          return '<tr>' +
+            '<td>' + esc(u.username) + '</td>' +
+            '<td>' + esc(u.rol) + (u.debe_cambiar_password ? ' <span class="rol-badge">debe cambiar</span>' : '') + '</td>' +
+            '<td>' + (u.activo ? 'Activo' : 'Inactivo') + '</td>' +
+            '<td><div class="acciones">' +
+            '<button class="btn btn-borde" onclick="resetPassword(' + u.id + ')">Resetear clave</button>' +
+            '<button class="btn ' + (u.activo ? 'btn-rojo' : 'btn-verde') + '" onclick="toggleUsuario(' + u.id + ',' + u.activo + ')">' + (u.activo ? 'Desactivar' : 'Activar') + '</button>' +
+            '</div></td></tr>';
+        }).join("");
+      }).catch(function () {});
+    }
+
+    function abrirNuevoUsuario() {
+      var modal = document.getElementById("modal");
+      modal.classList.remove("oculto");
+      modal.innerHTML =
+        '<div style="position:fixed; inset:0; background:rgba(10,20,40,.5); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50;">' +
+        '<div class="tarjeta" style="width:100%; max-width:400px; margin:0;">' +
+        '<h2>Nuevo usuario</h2>' +
+        '<div style="margin-bottom:12px;"><label>Usuario</label><input id="nu_user" required></div>' +
+        '<div style="margin-bottom:12px;"><label>Contraseña</label><input id="nu_pass" type="password" minlength="6" required></div>' +
+        '<div style="margin-bottom:16px;"><label>Rol</label>' +
+        '<select id="nu_rol"><option value="editor">Editor</option><option value="admin">Administrador</option></select></div>' +
+        '<div style="display:flex; gap:8px; justify-content:flex-end;">' +
+        '<button class="btn btn-borde" onclick="document.getElementById(\'modal\').classList.add(\'oculto\')">Cancelar</button>' +
+        '<button class="btn btn-primario" onclick="crearUsuario()">Crear</button>' +
+        '</div></div></div>';
+    }
+
+    function crearUsuario() {
+      var username = document.getElementById("nu_user").value.trim();
+      var password = document.getElementById("nu_pass").value;
+      var rol = document.getElementById("nu_rol").value;
+      if (!username || password.length < 6) { alert("Usuario obligatorio y contraseña de al menos 6 caracteres"); return; }
+      api("/api/usuarios", {
+        method: "POST",
+        body: JSON.stringify({ username: username, password: password, rol: rol })
+      }).then(function () {
+        document.getElementById("modal").classList.add("oculto");
+        cargarUsuarios();
+      }).catch(mostrarError);
+    }
+
+    function resetPassword(id) {
+      var nueva = prompt("Nueva contraseña para el usuario (mínimo 6 caracteres):");
+      if (!nueva || nueva.length < 6) return;
+      api("/api/usuarios/" + id + "/password", {
+        method: "PUT",
+        body: JSON.stringify({ password: nueva })
+      }).then(cargarUsuarios).catch(mostrarError);
+    }
+
+    function toggleUsuario(id, activo) {
+      api("/api/usuarios/" + id + "/estado?activo=" + (activo ? 0 : 1), { method: "PUT" })
+        .then(cargarUsuarios).catch(mostrarError);
+    }
+
+    function cambiarPassword() {
+      var modal = document.getElementById("modal");
+      modal.classList.remove("oculto");
+      modal.innerHTML =
+        '<div style="position:fixed; inset:0; background:rgba(10,20,40,.5); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50;">' +
+        '<div class="tarjeta" style="width:100%; max-width:380px; margin:0;">' +
+        '<h2>Cambiar contraseña</h2>' +
+        '<div style="margin-bottom:12px;"><label>Contraseña actual</label><input id="cp_actual" type="password" required></div>' +
+        '<div style="margin-bottom:12px;"><label>Nueva contraseña</label><input id="cp_nueva" type="password" minlength="6" required></div>' +
+        '<div style="margin-bottom:16px;"><label>Repite la nueva</label><input id="cp_nueva2" type="password" minlength="6" required></div>' +
+        '<div style="display:flex; gap:8px; justify-content:flex-end;">' +
+        '<button class="btn btn-borde" onclick="document.getElementById(\'modal\').classList.add(\'oculto\')">Cancelar</button>' +
+        '<button class="btn btn-acento" onclick="guardarPassword()">Guardar</button>' +
+        '</div></div></div>';
+    }
+
+    function guardarPassword() {
+      var a = document.getElementById("cp_actual").value;
+      var n1 = document.getElementById("cp_nueva").value;
+      var n2 = document.getElementById("cp_nueva2").value;
+      if (n1 !== n2) { alert("Las contraseñas no coinciden"); return; }
+      api("/api/password", {
+        method: "POST",
+        body: JSON.stringify({ password_actual: a, password_nueva: n1 })
+      }).then(function () {
+        document.getElementById("modal").classList.add("oculto");
+        alert("Contraseña actualizada");
+      }).catch(mostrarError);
+    }
+
+    function mostrarError(msg) {
+      var el = document.getElementById("mensaje");
+      el.textContent = msg;
+      el.classList.remove("oculto");
+      setTimeout(function () { el.classList.add("oculto"); }, 4000);
+    }
+
+    mostrarUsuario();
+    cargarEmpleados();
+    if (esAdmin) cargarUsuarios();
+  </script>
+</body>
+</html>

@@ -1,161 +1,146 @@
-# 📱 Sistema de Generación y Seguimiento de Códigos QR
+# 🪪 Sistema de Carnets con Código QR
 
-Sistema completo para generar códigos QR personalizados y realizar seguimiento detallado de escaneos con estadísticas avanzadas.
+Sistema para generar **carnets de empleados con código QR**. Al escanear el QR se abre una
+página pública con la foto del trabajador, su cargo, correo, WhatsApp y las redes de la empresa.
+Incluye panel de administración con roles (administrador y editor) para que RRHH gestione los
+empleados, y generación de carnets imprimibles.
+
+> Desarrollado con **FastAPI, SQLite, Chart.js y Bootstrap**.
 
 ## 🚀 Características
 
-### Generación de QR
-- ✅ Generación de códigos QR personalizables
-- ✅ Opciones de tamaño, colores y corrección de errores
-- ✅ Logo personalizado integrado (SENA)
-- ✅ **Descarga funcional de códigos QR** (CORREGIDO)
+### Empleados y Carnets
+- ✅ Carnet imprimible con: nombre de la empresa, foto, nombre y apellido, cédula, cargo y QR.
+- ✅ QR con el **logo de la empresa** en el centro.
+- ✅ Perfil público al escanear: foto, cargo, correo (mailto), WhatsApp (wa.me) y redes de la empresa.
+- ✅ Fondo e imagen de la empresa configurables.
+- ✅ Baja lógica (soft delete): los empleados se desactivan, no se borran.
 
-### Seguimiento y Estadísticas
-- ✅ **Registro automático de escaneos** con información detallada
-- ✅ **Filtros avanzados por día, mes, hora y año** (IMPLEMENTADO)
-- ✅ **Estadísticas en tiempo real** con gráficos interactivos
-- ✅ **Dashboard completo** con métricas clave
-- ✅ Captura de IP, User Agent y Referer
-- ✅ Campos calculados automáticamente (año, mes, día, hora)
+### Panel de administración
+- ✅ Login con usuarios y contraseñas (hash PBKDF2 + token JWT).
+- ✅ Roles: **administrador** (crea y edita todo, incluye cargo y cédula) y **editor**
+  (solo puede modificar teléfono y correo).
+- ✅ Primer acceso: el admin inicial debe cambiar su contraseña.
+- ✅ Gestión de usuarios (crear editores/administradores, resetear contraseñas, activar/desactivar).
+- ✅ Formulario amigable en español, validado, con carga de foto.
 
-## 🛠️ Instalación y Configuración
+### Seguimiento de escaneos (se mantiene de la versión anterior)
+- ✅ Registro automático de escaneos con IP, User Agent y Referer.
+- ✅ Filtros por día, mes, hora y año.
+- ✅ Dashboard con gráficos (servidor de estadísticas en el puerto 8001).
+
+## 🛠️ Instalación
 
 ### Prerrequisitos
 - Python 3.8+
 - Navegador web moderno
 
-### 1. Instalar Dependencias Python
+### 1. Crear entorno virtual e instalar dependencias
 ```bash
-pip install fastapi "uvicorn[standard]"
+python3 -m venv .venv
+./.venv/bin/python -m pip install --upgrade pip
+./.venv/bin/python -m pip install -r requirements.txt
 ```
 
-### 2. Configurar Conexión a Base de Datos
-El proyecto usa **SQLite** (no requiere servidor externo). La base de datos `qr_tracker.db`
-se crea automáticamente al arrancar el servidor principal.
-
-Opcionalmente puedes indicar una ruta diferente de la base de datos con la variable de entorno
-`QR_DB_PATH` (útil para pruebas):
-
-## 🚀 Ejecución
-
-### Servidor Principal (Puerto 8000)
+### 2. Ejecutar (usa el Python del venv)
 ```bash
-uvicorn main:app --reload --port 8000
-```
-
-### Servidor de Estadísticas (Puerto 8001)
-```bash
-cd estadisticas
-uvicorn main:app --reload --port 8001
-```
-
-### Acceso a la Aplicación
-- **Generador QR**: `http://localhost:8000` (servido por el servidor principal)
-- **Estadísticas**: `http://localhost:8001` (servido por el servidor de estadísticas)
-
-> Ambos servidores sirven ahora su interfaz HTML directamente, ya no hace falta abrir
-> los archivos `.html` como `file://`.
-
-### Inicio (usando el Python del venv)
-```bash
-# Terminal 1 - generador (puerto 8000)
+# Terminal 1 - aplicación principal (puerto 8000)
 ./.venv/bin/python -m uvicorn main:app --reload --port 8000
 
 # Terminal 2 - estadísticas (puerto 8001)
-./.venv/bin/python -m uvicorn main:app --reload --port 8001
+cd estadisticas && ../.venv/bin/python -m uvicorn main:app --reload --port 8001
 ```
 
-## 📊 Funcionalidades de Estadísticas
+### 2b. Compartir en la red interna (LAN)
+Para que el equipo interno escanee los QR desde sus celulares, el servidor debe
+escuchar en todas las interfaces y el QR debe usar la **IP local** de la máquina:
 
-### Filtros Disponibles
-- **Por fecha específica**: Seleccionar día exacto
-- **Por mes**: Filtrar por mes específico
-- **Por año**: Filtrar por año específico
-- **Por rango de horas**: Desde hora X hasta hora Y
-- **Límite de registros**: 50, 100, 200, 500 registros
-
-### Métricas Disponibles
-- Total de escaneos históricos
-- Escaneos por día (últimos 7 días)
-- Escaneos por hora del día actual
-- Días con actividad
-- Horas más activas
-
-### Endpoints API
-
-#### Servidor Principal (Puerto 8000)
-- `GET /scan` - Registrar escaneo
-- `GET /registros` - Obtener registros con filtros
-- `GET /estadisticas/por-dia` - Estadísticas diarias
-- `GET /estadisticas/por-mes` - Estadísticas mensuales
-- `GET /estadisticas/por-hora` - Estadísticas por hora
-- `GET /estadisticas/por-año` - Estadísticas anuales
-- `GET /estadisticas/resumen` - Resumen general
-
-#### Servidor de Estadísticas (Puerto 8001)
-- `GET /registros` - Registros con filtros avanzados
-- `GET /estadisticas` - Estadísticas resumidas
-
-## 🔧 Estructura del Proyecto
-
-```
-QR/
-├── main.py                 # Servidor principal con APIs
-├── app.js                  # Lógica del generador QR
-├── index.html              # Interfaz del generador
-├── styles.css              # Estilos del generador
-├── scans.sql              # Estructura de base de datos
-├── estadisticas/
-│   ├── main.py            # Servidor de estadísticas
-│   ├── registros.html     # Dashboard de estadísticas
-│   └── estilos.css        # Estilos del dashboard
-└── README.md              # Este archivo
+```bash
+# Terminal 1 - expuesto a la red
+BASE_URL=http://TU_IP_LOCAL:8000 ./.venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-## 🐛 Problemas Solucionados
+1. Averigua tu IP local (ej. `hostname -I` en Linux/WSL, o `ipconfig` en Windows).
+2. Usa esa IP como `BASE_URL` (los QR que generes la codificarán).
+3. Genera/imprime los carnets y comparte la IP con el equipo para que escaneen.
+4. Asegúrate de que el firewall permita el puerto 8000 en la red local.
 
-### ✅ Descarga de QR
-- **Problema**: La función `downloadQR()` no funcionaba correctamente
-- **Solución**: Implementado método `toDataURL()` más compatible con manejo de errores
+### 3. Primer acceso
+- Abre `http://localhost:8000`
+- Usuario inicial: **`admin`** / **`admin123`**
+- El sistema te pedirá **cambiar la contraseña** en el primer acceso.
 
-### ✅ Estadísticas Limitadas
-- **Problema**: Solo filtros básicos por fecha y hora
-- **Solución**: Filtros avanzados por día, mes, año, rangos de hora
+> ⚠️ Cambia también la variable `SECRET_KEY` (entorno) antes de un despliegue real.
 
-### ✅ Base de Datos Básica
-- **Problema**: Campos limitados para estadísticas
-- **Solución**: Agregados campos calculados automáticamente y metadatos
+## 📖 Uso
 
-### ✅ Interfaz de Estadísticas
-- **Problema**: Interfaz básica sin gráficos
-- **Solución**: Dashboard completo con Chart.js y métricas en tiempo real
+1. **Administrador**: entra a *Configuración empresa* para cargar nombre, logo (centro del QR),
+   imagen de fondo y redes sociales (LinkedIn, X, Instagram, web, etc.).
+2. **Administrador**: crea empleados desde *+ Nuevo empleado* (nombre, apellido, cédula, cargo,
+   correo, teléfono y foto).
+3. Abre el **carnet** de un empleado (botón *Carnet*) e imprímelo o guárdalo como PDF.
+4. **Editor**: puede editar empleados existentes, pero **solo teléfono y correo**.
 
-## 📈 Nuevas Funcionalidades
+### URL base del QR
+El QR codifica `{BASE_URL}/perfil/{id}`. Define la variable de entorno `BASE_URL` según el
+despliegue:
 
-1. **Gráficos Interactivos**: Visualización de datos con Chart.js
-2. **Filtros Avanzados**: Múltiples criterios de filtrado
-3. **Métricas en Tiempo Real**: Estadísticas actualizadas automáticamente
-4. **Información Detallada**: Captura de User Agent, IP, Referer
-5. **Campos Calculados**: Año, mes, día, hora extraídos automáticamente
-6. **API Completa**: Endpoints para todas las estadísticas
-7. **Interfaz Mejorada**: Design moderno con Bootstrap 5
+```bash
+# Pruebas locales
+export BASE_URL=http://localhost:8000
+
+# Servidor de la empresa con IP fija
+export BASE_URL=http://192.168.1.50:8000
+```
+
+## 📂 Estructura
+
+```
+├── main.py              # App principal + endpoints de escaneo/estadísticas
+├── database.py          # Conexión SQLite y creación de tablas
+├── auth.py              # Hash PBKDF2, JWT y dependencias de rol
+├── schemas.py           # (reservado) validación Pydantic
+├── config.py            # Settings (BASE_URL)
+├── media.py             # Guardado y normalización de imágenes
+├── templating.py        # Renderizado de plantillas
+├── routers/
+│   ├── auth.py          # Login, /api/me, cambio de contraseña
+│   ├── usuarios.py      # Gestión de usuarios (admin)
+│   ├── empleados.py     # CRUD empleados con permisos por rol
+│   ├── empresa.py       # Configuración de la empresa (admin)
+│   └── paginas.py       # Páginas: login, admin, formulario, carnet, perfil
+├── templates/           # HTML (login, admin, formulario, config, carnet, perfil, generador)
+├── static/              # CSS/JS/logo
+├── uploads/             # Fotos e imágenes subidas
+├── estadisticas/        # Dashboard de estadísticas (servidor 8001)
+└── tests/               # Suite pytest (49 pruebas)
+```
 
 ## 🔒 Seguridad
 
-- CORS configurado para desarrollo
-- Validación de parámetros en endpoints
-- Manejo de errores en frontend y backend
-- Límites en consultas para evitar sobrecarga
+- Contraseñas con **PBKDF2** (salt aleatorio, 120k iteraciones) — no se almacenan en claro.
+- Autenticación por **token JWT** con expiración.
+- Permisos por rol en el backend (no confía solo en el frontend).
+- Validación de imágenes (tipo MIME permitido) y eliminación de archivos al reemplazarlos.
+- CORS abierto para desarrollo; ajustar en producción.
 
-## 📝 Notas de Desarrollo
+## 🧪 Pruebas
 
-- Los servidores deben ejecutarse en puertos diferentes (8000 y 8001)
-- La base de datos se recrea automáticamente con datos de ejemplo
-- Los gráficos se actualizan automáticamente al cargar la página
-- Todos los filtros son opcionales y se pueden combinar
+```bash
+./.venv/bin/python -m pytest tests -q
+```
 
----
+## Endpoints principales
 
-**Desarrollado con FastAPI, SQLite, Chart.js y Bootstrap 5**
+### Públicos
+- `GET /login`, `GET /perfil/{id}`, `GET /scan`, `GET /registros`, `GET /estadisticas/*`
 
+### Autenticados (Bearer token)
+- `POST /api/login`, `GET /api/me`, `POST /api/password`
+- `GET /api/empleados`, `GET /api/empleados/{id}`
+- `PUT /api/empleados/{id}` — editor: solo `telefono` y `correo`; admin: todos los campos
 
+### Solo administrador
+- `POST /api/empleados`, `DELETE /api/empleados/{id}`, `POST /api/empleados/{id}/restaurar`
+- `GET|PUT /api/empresa`
+- `GET|POST /api/usuarios`, `PUT /api/usuarios/{id}/password`, `PUT /api/usuarios/{id}/estado`

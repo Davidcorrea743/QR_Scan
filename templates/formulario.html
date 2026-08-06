@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formulario empleado - Carnet QR</title>
+  <link rel="stylesheet" href="/static/panel.css">
+</head>
+<body>
+  <header class="panel-header">
+    <div class="marca">
+      <img src="/static/logo Dimsop_Isotipo.png" alt="Logo">
+      <span id="tituloPagina">Nuevo empleado</span>
+    </div>
+    <div class="usuario">
+      <span id="nombreUsuario"></span>
+      <span class="rol-badge" id="rolUsuario"></span>
+      <button class="btn btn-borde" onclick="location.href='/admin'">← Volver al panel</button>
+      <button class="btn btn-rojo" onclick="logout()">Salir</button>
+    </div>
+  </header>
+
+  <div class="contenido">
+    <div class="tarjeta" id="formCard">
+      <h2 id="tituloTarjeta">Nuevo empleado</h2>
+      <p style="color:#5b6472; font-size:14px; margin-top:0;" id="subtitulo"></p>
+      <div id="mensaje" class="error oculto"></div>
+
+      <form id="formEmpleado">
+        <div class="form-grid">
+          <div>
+            <label>Nombre *</label>
+            <input type="text" id="nombre" required>
+          </div>
+          <div>
+            <label>Apellido *</label>
+            <input type="text" id="apellido" required>
+          </div>
+          <div>
+            <label>Cédula</label>
+            <input type="text" id="cedula">
+          </div>
+          <div>
+            <label>Cargo</label>
+            <input type="text" id="cargo">
+          </div>
+          <div>
+            <label>Correo corporativo</label>
+            <input type="email" id="correo" placeholder="nombre@empresa.com">
+          </div>
+          <div>
+            <label>Teléfono / WhatsApp</label>
+            <input type="tel" id="telefono" placeholder="3001234567">
+          </div>
+          <div class="full">
+            <label>Foto del empleado</label>
+            <input type="file" id="foto" accept="image/png,image/jpeg,image/webp">
+            <img id="previewFoto" alt="" style="width:90px;height:90px;border-radius:50%;object-fit:cover;background:#e4e8ef;margin-top:10px;">
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+          <button type="button" class="btn btn-borde" onclick="location.href='/admin'">Cancelar</button>
+          <button type="submit" class="btn btn-verde" id="btnGuardar">Guardar</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="tarjeta oculto" id="exitoCard">
+      <h2>✅ Empleado guardado</h2>
+      <p style="color:#5b6472;">Puedes imprimir el carnet o ver el perfil público (lo que ve quien escanea el QR).</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
+        <button class="btn btn-acento" onclick="window.open(URL_CARNET,'_blank')">Ver carnet imprimible</button>
+        <button class="btn btn-borde" onclick="window.open(URL_PERFIL,'_blank')">Ver perfil público</button>
+        <button class="btn btn-borde" onclick="location.href='/admin'">Volver al panel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/panel.js"></script>
+  <script>
+    if (!requiereLogin()) {}
+
+    var esAdmin = getRol() === "admin";
+    var empleadoId = new URLSearchParams(window.location.search).get("id");
+    var esNuevo = !empleadoId;
+    var URL_CARNET = "", URL_PERFIL = "";
+
+    document.getElementById("nombreUsuario").textContent = getUsername();
+    document.getElementById("rolUsuario").textContent = getRol();
+
+    if (!esAdmin && esNuevo) {
+      document.getElementById("mensaje").textContent = "Solo el administrador puede crear empleados.";
+      document.getElementById("mensaje").classList.remove("oculto");
+      document.getElementById("formEmpleado").querySelectorAll("input").forEach(function (i) { i.disabled = true; });
+    }
+
+    document.getElementById("foto").addEventListener("change", function (e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        document.getElementById("previewFoto").src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (!esNuevo) {
+      document.getElementById("tituloPagina").textContent = "Editar empleado";
+      document.getElementById("tituloTarjeta").textContent = "Editar empleado";
+      api("/api/empleados/" + empleadoId).then(function (e) {
+        document.getElementById("nombre").value = e.nombre || "";
+        document.getElementById("apellido").value = e.apellido || "";
+        document.getElementById("cedula").value = e.cedula || "";
+        document.getElementById("cargo").value = e.cargo || "";
+        document.getElementById("correo").value = e.correo || "";
+        document.getElementById("telefono").value = e.telefono || "";
+        if (e.foto) {
+          document.getElementById("previewFoto").src = "/uploads/" + encodeURIComponent(e.foto);
+        }
+        if (!esAdmin) {
+          document.getElementById("nombre").disabled = true;
+          document.getElementById("apellido").disabled = true;
+          document.getElementById("cedula").disabled = true;
+          document.getElementById("cargo").disabled = true;
+          document.getElementById("foto").disabled = true;
+          document.getElementById("subtitulo").textContent =
+            "Como editor puedes actualizar solo el teléfono y el correo.";
+        }
+      }).catch(function (err) {
+        document.getElementById("mensaje").textContent = err.message;
+        document.getElementById("mensaje").classList.remove("oculto");
+      });
+    }
+
+    document.getElementById("formEmpleado").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var mensaje = document.getElementById("mensaje");
+      mensaje.classList.add("oculto");
+
+      var fd = new FormData();
+      if (esNuevo) {
+        fd.append("nombre", document.getElementById("nombre").value);
+        fd.append("apellido", document.getElementById("apellido").value);
+        fd.append("cedula", document.getElementById("cedula").value);
+        fd.append("cargo", document.getElementById("cargo").value);
+        fd.append("correo", document.getElementById("correo").value);
+        fd.append("telefono", document.getElementById("telefono").value);
+        var foto = document.getElementById("foto").files[0];
+        if (foto) fd.append("foto", foto);
+      } else {
+        if (esAdmin) {
+          fd.append("nombre", document.getElementById("nombre").value);
+          fd.append("apellido", document.getElementById("apellido").value);
+          fd.append("cedula", document.getElementById("cedula").value);
+          fd.append("cargo", document.getElementById("cargo").value);
+          fd.append("correo", document.getElementById("correo").value);
+          fd.append("telefono", document.getElementById("telefono").value);
+          var foto2 = document.getElementById("foto").files[0];
+          if (foto2) fd.append("foto", foto2);
+        } else {
+          fd.append("correo", document.getElementById("correo").value);
+          fd.append("telefono", document.getElementById("telefono").value);
+        }
+      }
+
+      var url = esNuevo ? "/api/empleados" : "/api/empleados/" + empleadoId;
+      var method = esNuevo ? "POST" : "PUT";
+
+      api(url, { method: method, body: fd }).then(function (res) {
+        var id = res.id || empleadoId;
+        URL_CARNET = "/carnet/" + id;
+        URL_PERFIL = "{{BASE_URL}}" + "/perfil/" + id;
+        document.getElementById("formCard").classList.add("oculto");
+        document.getElementById("exitoCard").classList.remove("oculto");
+      }).catch(function (err) {
+        mensaje.textContent = err.message;
+        mensaje.classList.remove("oculto");
+      });
+    });
+  </script>
+</body>
+</html>

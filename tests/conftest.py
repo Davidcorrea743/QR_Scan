@@ -15,6 +15,7 @@ sys.path.insert(0, ROOT)
 import pytest
 from fastapi.testclient import TestClient
 
+import database
 import main
 from estadisticas import main as stats_main
 
@@ -22,11 +23,11 @@ from estadisticas import main as stats_main
 def _init_fresh():
     if os.path.exists(_TEST_DB):
         os.remove(_TEST_DB)
-    main.init_database()
+    database.init_database()
 
 
-def _seed():
-    conn = main.get_connection()
+def _seed_scans():
+    conn = database.get_connection()
     cur = conn.cursor()
     hoy = date.today()
     rows = [
@@ -49,7 +50,7 @@ def _seed():
 @pytest.fixture
 def client():
     _init_fresh()
-    _seed()
+    _seed_scans()
     return TestClient(main.app)
 
 
@@ -62,5 +63,17 @@ def empty_client():
 @pytest.fixture
 def stats_client():
     _init_fresh()
-    _seed()
+    _seed_scans()
     return TestClient(stats_main.app)
+
+
+@pytest.fixture
+def admin_token(client):
+    res = client.post("/api/login", json={"username": "admin", "password": "admin123"})
+    assert res.status_code == 200, res.text
+    return res.json()["access_token"]
+
+
+@pytest.fixture
+def auth_headers(admin_token):
+    return {"Authorization": f"Bearer {admin_token}"}

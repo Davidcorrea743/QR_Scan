@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar sesión - Carnet QR</title>
+  <link rel="stylesheet" href="/static/panel.css">
+</head>
+<body>
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="marca">
+        <img src="/static/logo Dimsop_Isotipo.png" alt="Logo">
+        <h1>Carnet QR</h1>
+        <p>Acceso al panel de administración</p>
+      </div>
+
+      <form id="loginForm">
+        <div style="margin-bottom:14px;">
+          <label>Usuario</label>
+          <input type="text" id="username" autocomplete="username" required>
+        </div>
+        <div style="margin-bottom:20px;">
+          <label>Contraseña</label>
+          <input type="password" id="password" autocomplete="current-password" required>
+        </div>
+        <div id="msg" class="error oculto"></div>
+        <button type="submit" class="btn btn-primario" style="width:100%;">Entrar</button>
+      </form>
+
+      <form id="passwordForm" class="oculto" style="margin-top:4px;">
+        <h3 style="margin-bottom:10px;">Cambia tu contraseña</h3>
+        <p style="font-size:13px;">Es tu primer acceso. Debes definir una nueva contraseña.</p>
+        <div style="margin-bottom:12px;">
+          <label>Contraseña actual</label>
+          <input type="password" id="pwActual" required>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label>Nueva contraseña</label>
+          <input type="password" id="pwNueva" minlength="6" required>
+        </div>
+        <div style="margin-bottom:14px;">
+          <label>Repite la nueva contraseña</label>
+          <input type="password" id="pwNueva2" minlength="6" required>
+        </div>
+        <div id="msg2" class="error oculto"></div>
+        <button type="submit" class="btn btn-acento" style="width:100%;">Guardar contraseña</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/panel.js"></script>
+  <script>
+    var tokenGuardado = null;
+
+    document.getElementById("loginForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var msg = document.getElementById("msg");
+      msg.classList.add("oculto");
+      fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: document.getElementById("username").value,
+          password: document.getElementById("password").value
+        })
+      }).then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.detail || "Error"); return d; }); })
+        .then(function (data) {
+          tokenGuardado = data.access_token;
+          localStorage.setItem("token", data.access_token);
+          localStorage.setItem("rol", data.rol);
+          localStorage.setItem("username", data.username);
+          localStorage.setItem("debe_cambiar_password", data.debe_cambiar_password ? "1" : "0");
+          if (data.debe_cambiar_password) {
+            document.getElementById("loginForm").classList.add("oculto");
+            document.getElementById("passwordForm").classList.remove("oculto");
+          } else {
+            window.location.href = "/admin";
+          }
+        }).catch(function (err) {
+          msg.textContent = err.message;
+          msg.classList.remove("oculto");
+        });
+    });
+
+    document.getElementById("passwordForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var msg = document.getElementById("msg2");
+      msg.classList.add("oculto");
+      if (document.getElementById("pwNueva").value !== document.getElementById("pwNueva2").value) {
+        msg.textContent = "Las contraseñas no coinciden";
+        msg.classList.remove("oculto");
+        return;
+      }
+      api("/api/password", {
+        method: "POST",
+        body: JSON.stringify({
+          password_actual: document.getElementById("pwActual").value,
+          password_nueva: document.getElementById("pwNueva").value
+        })
+      }).then(function () {
+        localStorage.setItem("debe_cambiar_password", "0");
+        window.location.href = "/admin";
+      }).catch(function (err) {
+        msg.textContent = err.message;
+        msg.classList.remove("oculto");
+      });
+    });
+  </script>
+</body>
+</html>
