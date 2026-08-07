@@ -144,3 +144,75 @@ def test_eliminar_imagen_campo_invalido(client, auth_headers):
 def test_eliminar_imagen_requiere_admin(client):
     res = client.delete("/api/empresa/imagen/logo")
     assert res.status_code == 401
+
+
+def test_vcard_descarga(client, auth_headers):
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    client.put("/api/empresa", data={"nombre": "Empresa Test"}, headers=auth_headers)
+    res = client.get(f"/vcard/{emp_id}")
+    assert res.status_code == 200
+    assert res.headers["content-type"].startswith("text/vcard")
+    assert "attachment" in res.headers["content-disposition"]
+    body = res.text
+    assert "BEGIN:VCARD" in body
+    assert "END:VCARD" in body
+    assert "FN:Juan P\u00e9rez" in body
+    assert "ORG:Empresa Test" in body
+    assert "TITLE:Desarrollador" in body
+    assert "3001112233" in body
+    assert "juan@empresa.com" in body
+
+
+def test_vcard_no_existe_404(client):
+    res = client.get("/vcard/99999")
+    assert res.status_code == 404
+
+
+def test_vcard_inactivo_404(client, auth_headers):
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    client.delete(f"/api/empleados/{emp_id}", headers=auth_headers)
+    res = client.get(f"/vcard/{emp_id}")
+    assert res.status_code == 404
+
+
+def test_empresa_ubicacion_y_galeria(client, auth_headers):
+    res = client.put(
+        "/api/empresa",
+        data={"nombre": "Empresa Test", "ubicacion": "https://maps.example.com/lugar?a=1&b=2"},
+        files=[
+            ("galeria", ("g1.png", png_bytes(), "image/png")),
+            ("galeria", ("g2.png", png_bytes(), "image/png")),
+        ],
+        headers=auth_headers,
+    )
+    assert res.status_code == 200, res.text
+
+    data = client.get("/api/empresa", headers=auth_headers).json()
+    assert data["ubicacion"] == "https://maps.example.com/lugar?a=1&b=2"
+    galeria = data["galeria"]
+    assert isinstance(galeria, list) and len(galeria) == 2
+
+    res = client.delete(f"/api/empresa/galeria/{galeria[0]}", headers=auth_headers)
+    assert res.status_code == 200
+    data = client.get("/api/empresa", headers=auth_headers).json()
+    assert data["galeria"] == [galeria[1]]
+
+
+def test_perfil_carousel_con_galeria(client, auth_headers):
+    client.put(
+        "/api/empresa",
+        data={"nombre": "Empresa Test"},
+        files=[("galeria", ("g.png", png_bytes(), "image/png"))],
+        headers=auth_headers,
+    )
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    body = client.get(f"/perfil/{emp_id}").text
+    assert "carouselEmpresa" in body
+    assert "carousel-item active" in body
+    assert "img-galeria" in body
+
+
+def test_perfil_carousel_oculto_sin_galeria(client, auth_headers):
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    body = client.get(f"/perfil/{emp_id}").text
+    assert "carouselEmpresa" not in body

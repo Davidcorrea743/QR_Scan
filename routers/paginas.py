@@ -1,8 +1,12 @@
+import base64
+import io
 import json
+import os
+import urllib.parse
 from html import escape
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
 import config
 import database
@@ -46,6 +50,11 @@ def _empresa_data(conn):
     except (json.JSONDecodeError, TypeError):
         redes = []
     data["redes"] = redes
+    try:
+        galeria = json.loads(data.get("galeria") or "[]")
+    except (json.JSONDecodeError, TypeError):
+        galeria = []
+    data["galeria"] = galeria
     return data
 
 
@@ -123,6 +132,69 @@ async def carnet_page(emp_id: int):
     )
 
 
+@router.get("/vcard/{emp_id}", include_in_schema=False)
+async def vcard_trabajador(emp_id: int):
+    conn = database.get_connection()
+    try:
+        emp = conn.execute(
+            "SELECT * FROM empleados WHERE id = ? AND activo = 1", (emp_id,)
+        ).fetchone()
+        empresa = conn.execute("SELECT * FROM empresa WHERE id = 1").fetchone()
+    finally:
+        conn.close()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Trabajador no encontrado")
+
+    nombre = (emp["nombre"] or "").strip()
+    apellido = (emp["apellido"] or "").strip()
+    org = (empresa["nombre"] if empresa else None) or ""
+    cargo = (emp["cargo"] or "").strip()
+    telefono = (emp["telefono"] or "").strip()
+    correo = (emp["correo"] or "").strip()
+
+    lines = ["BEGIN:VCARD", "VERSION:3.0", f"N:{apellido};{nombre};;;"]
+    lines.append(f"FN:{nombre} {apellido}".strip())
+    if org:
+        lines.append(f"ORG:{org}")
+    if cargo:
+        lines.append(f"TITLE:{cargo}")
+    if telefono:
+        lines.append(f"TEL;TYPE=CELL:{telefono}")
+    if correo:
+        lines.append(f"EMAIL;TYPE=WORK:{correo}")
+    if emp["foto"]:
+        try:
+            ruta = os.path.join(database.UPLOADS_DIR, emp["foto"])
+            if os.path.exists(ruta):
+                from PIL import Image
+
+                img = Image.open(ruta).convert("RGB")
+                img.thumbnail((200, 200))
+                buf = io.BytesIO()
+                img.save(buf, "JPEG")
+                lines.append(
+                    "PHOTO;ENCODING=b;TYPE=JPEG:"
+                    + base64.b64encode(buf.getvalue()).decode()
+                )
+        except Exception:
+            pass
+    lines.append("END:VCARD")
+
+    filename = f"{nombre or 'contacto'}_{apellido or emp['id']}.vcf"
+    filename = filename.replace(" ", "_")
+    filename_ascii = urllib.parse.quote(filename.encode("utf-8"))
+    return Response(
+        content="\r\n".join(lines),
+        media_type="text/vcard",
+        headers={
+            "Content-Disposition": (
+                f"attachment; filename=\"contacto.vcf\"; "
+                f"filename*=UTF-8''{filename_ascii}"
+            )
+        },
+    )
+
+
 @router.get("/perfil/{emp_id}", include_in_schema=False)
 async def perfil_publico(emp_id: int):
     conn = database.get_connection()
@@ -136,13 +208,12 @@ async def perfil_publico(emp_id: int):
     if not emp:
         raise HTTPException(status_code=404, detail="Trabajador no encontrado")
 
-    fondo = empresa.get("fondo", "")
-    fondo_css = f"url('/uploads/{fondo}')" if fondo else "linear-gradient(160deg, #003362, #004587)"
+    logo = empresa.get("titulo") or empresa.get("logo", "")
+    ubicacion = empresa.get("ubicacion", "")
     context = {
         "BASE_URL": config.BASE_URL,
         "EMPRESA_NOMBRE": empresa.get("nombre", ""),
-        "EMPRESA_LOGO": empresa.get("logo", ""),
-        "FONDO_CSS": fondo_css,
+        "EMPRESA_LOGO": logo,
         "NOMBRE": emp["nombre"],
         "APELLIDO": emp["apellido"],
         "CEDULA": emp["cedula"] or "",
@@ -151,9 +222,42 @@ async def perfil_publico(emp_id: int):
         "TELEFONO": emp["telefono"] or "",
         "FOTO": emp["foto"] or "",
         "REDES": _render_redes(empresa.get("redes", [])),
+        "UBICACION": ubicacion,
+        "UBICACION_JSON": json.dumps(ubicacion),
+        "GALERIA_HTML": _render_galeria(empresa.get("galeria", [])),
         "EMP_ID": emp["id"],
     }
     return HTMLResponse(templating.render("perfil.html", **context))
+
+
+def _render_galeria(galeria: list) -> str:
+    if not galeria:
+        return ""
+    items = []
+    for i, f in enumerate(galeria):
+        active = " active" if i == 0 else ""
+        items.append(
+            f'<div class="carousel-item{active}">'
+            f'<img src="/uploads/{f}" class="d-block w-100 img-galeria" '
+            f'alt="Imagen {i + 1} de la empresa">'
+            f"</div>"
+        )
+    return (
+        '<section class="tarjeta galeria-tarjeta">'
+        '<h2 class="titulo-seccion">Nuestra empresa</h2>'
+        '<div id="carouselEmpresa" class="carousel slide carousel-dark" '
+        'data-bs-ride="carousel" data-bs-interval="4000">'
+        '<div class="carousel-inner">' + "".join(items) + "</div>"
+        '<button class="carousel-control-prev" type="button" '
+        'data-bs-target="#carouselEmpresa" data-bs-slide="prev">'
+        '<span class="carousel-control-prev-icon" aria-hidden="true"></span>'
+        '<span class="visually-hidden">Anterior</span></button>'
+        '<button class="carousel-control-next" type="button" '
+        'data-bs-target="#carouselEmpresa" data-bs-slide="next">'
+        '<span class="carousel-control-next-icon" aria-hidden="true"></span>'
+        '<span class="visually-hidden">Siguiente</span></button>'
+        "</div></section>"
+    )
 
 
 def _render_redes(redes: list) -> str:

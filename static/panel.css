@@ -197,3 +197,27 @@ label { font-weight: 600; font-size: 13px; color: var(--gris-texto); display: bl
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .red-select { max-width: 160px; }
 .btn-xs { padding: 3px 12px; }
+
+/* galería del carousel */
+.galeria-list { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.galeria-item { position: relative; }
+.galeria-item img {
+  width: 100px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+  background: #eef1f6;
+}
+.galeria-quitar {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}

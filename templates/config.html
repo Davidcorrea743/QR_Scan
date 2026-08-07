@@ -32,9 +32,18 @@
           <input type="text" id="nombre" placeholder="Nombre de la empresa">
         </div>
         <div class="full">
+          <label>Ubicación (URL de Google Maps)</label>
+          <input type="text" id="ubicacion" placeholder="https://maps.app.goo.gl/...">
+        </div>
+        <div class="full">
           <label>Redes sociales</label>
           <div id="redesList"></div>
           <button type="button" class="btn btn-borde mt10" onclick="agregarRed()">+ Agregar red</button>
+        </div>
+        <div class="full">
+          <label>Galería (imágenes del carousel de la landing)</label>
+          <input type="file" id="galeria" accept="image/png,image/jpeg,image/webp" multiple>
+          <div id="galeriaList" class="galeria-list"></div>
         </div>
         <div>
           <label>Título de la empresa (logo/imagen para el carnet)</label>
@@ -160,6 +169,8 @@
     function cargar() {
       api("/api/empresa").then(function (data) {
         document.getElementById("nombre").value = data.nombre || "";
+        document.getElementById("ubicacion").value = data.ubicacion || "";
+        renderGaleria(Array.isArray(data.galeria) ? data.galeria : []);
         var redesRaw = data.redes;
         if (typeof redesRaw === "string") {
           try { redesRaw = JSON.parse(redesRaw); } catch (e) { redesRaw = []; }
@@ -197,10 +208,62 @@
       });
     });
 
+    function renderGaleria(galeria) {
+      var cont = document.getElementById("galeriaList");
+      cont.innerHTML = "";
+      if (!galeria.length) return;
+      galeria.forEach(function (nombre) {
+        var item = document.createElement("div");
+        item.className = "galeria-item";
+        item.innerHTML =
+          '<img src="/uploads/' + encodeURIComponent(nombre) + '" alt="">' +
+          '<button type="button" class="btn btn-rojo galeria-quitar" title="Quitar imagen" aria-label="Quitar imagen">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>';
+        item.querySelector(".galeria-quitar").addEventListener("click", function () {
+          eliminarGaleria(nombre);
+        });
+        cont.appendChild(item);
+      });
+    }
+
+    function eliminarGaleria(nombre) {
+      api("/api/empresa/galeria/" + encodeURIComponent(nombre), { method: "DELETE" }).then(function () {
+        cargarGaleria();
+      }).catch(function (err) {
+        var msg = document.getElementById("mensaje");
+        msg.classList.remove("aviso");
+        msg.classList.add("error");
+        msg.textContent = err.message;
+      });
+    }
+
+    function cargarGaleria() {
+      api("/api/empresa").then(function (data) {
+        renderGaleria(Array.isArray(data.galeria) ? data.galeria : []);
+      }).catch(function () {});
+    }
+
+    document.getElementById("galeria").addEventListener("change", function (e) {
+      var archivos = Array.prototype.slice.call(e.target.files || []);
+      if (!archivos.length) return;
+      var fd = new FormData();
+      archivos.forEach(function (f) { fd.append("galeria", f); });
+      api("/api/empresa", { method: "PUT", body: fd }).then(function () {
+        this.value = "";
+        cargarGaleria();
+      }.bind(this)).catch(function (err) {
+        var msg = document.getElementById("mensaje");
+        msg.classList.remove("aviso");
+        msg.classList.add("error");
+        msg.textContent = err.message;
+      });
+    });
+
     function guardar() {
       var fd = new FormData();
       fd.append("nombre", document.getElementById("nombre").value);
       fd.append("redes", JSON.stringify(leerRedes()));
+      fd.append("ubicacion", document.getElementById("ubicacion").value);
       var logo = document.getElementById("logo").files[0];
       var fondo = document.getElementById("fondo").files[0];
       var carnetFondo = document.getElementById("carnetFondo").files[0];

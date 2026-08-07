@@ -1,4 +1,5 @@
 import json
+from typing import List
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
@@ -16,7 +17,14 @@ def obtener(user=Depends(require_admin)):
         row = conn.execute("SELECT * FROM empresa WHERE id = 1").fetchone()
     finally:
         conn.close()
-    return dict(row) if row else {}
+    if not row:
+        return {}
+    data = dict(row)
+    try:
+        data["galeria"] = json.loads(data["galeria"]) if data.get("galeria") else []
+    except (json.JSONDecodeError, TypeError):
+        data["galeria"] = []
+    return data
 
 
 @router.delete("/imagen/{campo}")
@@ -36,14 +44,40 @@ def eliminar_imagen(campo: str, user=Depends(require_admin)):
     return {"ok": True}
 
 
+@router.delete("/galeria/{nombre}")
+def eliminar_imagen_galeria(nombre: str, user=Depends(require_admin)):
+    conn = database.get_connection()
+    try:
+        existing = conn.execute("SELECT * FROM empresa WHERE id = 1").fetchone()
+        if not existing or not existing["galeria"]:
+            return {"ok": True}
+        try:
+            galeria = json.loads(existing["galeria"])
+        except (json.JSONDecodeError, TypeError):
+            galeria = []
+        if nombre in galeria:
+            galeria.remove(nombre)
+            media.eliminar_archivo(nombre)
+            conn.execute(
+                "UPDATE empresa SET galeria = ? WHERE id = 1",
+                (json.dumps(galeria) if galeria else None,),
+            )
+            conn.commit()
+    finally:
+        conn.close()
+    return {"ok": True}
+
+
 @router.put("")
 def actualizar(
     nombre: str = Form(None),
     redes: str = Form(None),
+    ubicacion: str = Form(None),
     titulo: UploadFile = File(None),
     logo: UploadFile = File(None),
     fondo: UploadFile = File(None),
     carnet_fondo: UploadFile = File(None),
+    galeria: List[UploadFile] = File(None),
     user=Depends(require_admin),
 ):
     conn = database.get_connection()
@@ -59,6 +93,19 @@ def actualizar(
             except (json.JSONDecodeError, AssertionError):
                 raise HTTPException(status_code=400, detail="redes debe ser una lista JSON")
             valores["redes"] = json.dumps(parsed, ensure_ascii=False)
+        if ubicacion is not None:
+            valores["ubicacion"] = ubicacion.strip()
+
+        if galeria:
+            try:
+                actual = json.loads(existing["galeria"]) if existing and existing["galeria"] else []
+            except (json.JSONDecodeError, TypeError):
+                actual = []
+            for upload in galeria:
+                if upload and upload.filename:
+                    nuevo = media.guardar_imagen(upload, "galeria", normalizar=False)
+                    actual.append(nuevo)
+            valores["galeria"] = json.dumps(actual)
 
         if titulo:
             nuevo_titulo = media.guardar_imagen(titulo, "titulo", normalizar=False)
