@@ -110,3 +110,37 @@ def test_config_empresa_redes_invalidas(client, auth_headers):
         "/api/empresa", data={"redes": "no-es-json"}, headers=auth_headers
     )
     assert res.status_code == 400
+
+
+def test_eliminar_imagen_empresa(client, auth_headers):
+    client.put(
+        "/api/empresa",
+        data={"nombre": "Empresa Test"},
+        files={
+            "logo": ("logo.png", png_bytes(), "image/png"),
+            "carnet_fondo": ("cf.png", png_bytes(), "image/png"),
+        },
+        headers=auth_headers,
+    )
+    res = client.get("/api/empresa", headers=auth_headers)
+    assert res.json()["logo"]
+    assert res.json()["carnet_fondo"]
+
+    res = client.delete("/api/empresa/imagen/logo", headers=auth_headers)
+    assert res.status_code == 200
+    res = client.delete("/api/empresa/imagen/carnet_fondo", headers=auth_headers)
+    assert res.status_code == 200
+
+    data = client.get("/api/empresa", headers=auth_headers).json()
+    assert not data["logo"]
+    assert not data["carnet_fondo"]
+
+
+def test_eliminar_imagen_campo_invalido(client, auth_headers):
+    res = client.delete("/api/empresa/imagen/inexistente", headers=auth_headers)
+    assert res.status_code == 400
+
+
+def test_eliminar_imagen_requiere_admin(client):
+    res = client.delete("/api/empresa/imagen/logo")
+    assert res.status_code == 401

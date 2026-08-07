@@ -19,6 +19,23 @@ def obtener(user=Depends(require_admin)):
     return dict(row) if row else {}
 
 
+@router.delete("/imagen/{campo}")
+def eliminar_imagen(campo: str, user=Depends(require_admin)):
+    CAMPOS_VALIDOS = {"titulo", "logo", "fondo", "carnet_fondo"}
+    if campo not in CAMPOS_VALIDOS:
+        raise HTTPException(status_code=400, detail="Campo de imagen no válido")
+    conn = database.get_connection()
+    try:
+        existing = conn.execute("SELECT * FROM empresa WHERE id = 1").fetchone()
+        if existing and existing[campo]:
+            media.eliminar_archivo(existing[campo])
+            conn.execute(f"UPDATE empresa SET {campo} = NULL WHERE id = 1")
+            conn.commit()
+    finally:
+        conn.close()
+    return {"ok": True}
+
+
 @router.put("")
 def actualizar(
     nombre: str = Form(None),

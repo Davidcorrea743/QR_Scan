@@ -40,21 +40,33 @@
           <label>Título de la empresa (logo/imagen para el carnet)</label>
           <input type="file" id="titulo" accept="image/png,image/jpeg,image/webp">
           <img id="previewTitulo" alt="" class="preview preview-titulo">
+          <button type="button" class="btn btn-rojo btn-xs quitar-imagen oculto" data-campo="titulo" title="Quitar imagen" aria-label="Quitar imagen">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          </button>
         </div>
         <div>
           <label>Logo (centro del QR)</label>
           <input type="file" id="logo" accept="image/png,image/jpeg,image/webp">
           <img id="previewLogo" alt="" class="preview preview-logo">
+          <button type="button" class="btn btn-rojo btn-xs quitar-imagen oculto" data-campo="logo" title="Quitar imagen" aria-label="Quitar imagen">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          </button>
         </div>
         <div>
           <label>Imagen de fondo (perfil público)</label>
           <input type="file" id="fondo" accept="image/png,image/jpeg,image/webp">
           <img id="previewFondo" alt="" class="preview preview-fondo">
+          <button type="button" class="btn btn-rojo btn-xs quitar-imagen oculto" data-campo="fondo" title="Quitar imagen" aria-label="Quitar imagen">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          </button>
         </div>
         <div>
           <label>Imagen de fondo del carnet</label>
           <input type="file" id="carnetFondo" accept="image/png,image/jpeg,image/webp">
           <img id="previewCarnetFondo" alt="" class="preview preview-fondo">
+          <button type="button" class="btn btn-rojo btn-xs quitar-imagen oculto" data-campo="carnet_fondo" title="Quitar imagen" aria-label="Quitar imagen">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          </button>
         </div>
       </div>
 
@@ -73,6 +85,41 @@
     document.getElementById("nombreUsuario").textContent = getUsername();
 
     var redesGuardadas = [];
+
+    var CAMPOS = {
+      titulo: { input: "titulo", preview: "previewTitulo" },
+      logo: { input: "logo", preview: "previewLogo" },
+      fondo: { input: "fondo", preview: "previewFondo" },
+      carnet_fondo: { input: "carnetFondo", preview: "previewCarnetFondo" }
+    };
+
+    function botonQuitar(campo) {
+      return document.querySelector('.quitar-imagen[data-campo="' + campo + '"]');
+    }
+
+    function setImagenPresente(campo, presente) {
+      var b = botonQuitar(campo);
+      if (b) b.classList.toggle("oculto", !presente);
+    }
+
+    function eliminarImagen(campo) {
+      api("/api/empresa/imagen/" + campo, { method: "DELETE" }).then(function () {
+        var img = document.getElementById(CAMPOS[campo].preview);
+        img.removeAttribute("src");
+        document.getElementById(CAMPOS[campo].input).value = "";
+        setImagenPresente(campo, false);
+        var msg = document.getElementById("mensaje");
+        msg.classList.remove("error");
+        msg.classList.add("aviso");
+        msg.textContent = "Imagen eliminada. Quedará en blanco al guardar.";
+        setTimeout(function () { msg.classList.add("oculto"); }, 3500);
+      }).catch(function (err) {
+        var msg = document.getElementById("mensaje");
+        msg.classList.remove("aviso");
+        msg.classList.add("error");
+        msg.textContent = err.message;
+      });
+    }
 
     function filaRed(red) {
       var labels = [
@@ -119,40 +166,35 @@
         }
         redesGuardadas = Array.isArray(redesRaw) ? redesRaw : [];
         renderRedes();
-        if (data.logo) {
-          document.getElementById("previewLogo").src = "/uploads/" + encodeURIComponent(data.logo);
-          document.getElementById("previewLogo").dataset.actual = data.logo;
-        }
-        if (data.fondo) {
-          document.getElementById("previewFondo").src = "/uploads/" + encodeURIComponent(data.fondo);
-          document.getElementById("previewFondo").dataset.actual = data.fondo;
-        }
-        if (data.carnet_fondo) {
-          document.getElementById("previewCarnetFondo").src = "/uploads/" + encodeURIComponent(data.carnet_fondo);
-          document.getElementById("previewCarnetFondo").dataset.actual = data.carnet_fondo;
-        }
-        if (data.titulo) {
-          document.getElementById("previewTitulo").src = "/uploads/" + encodeURIComponent(data.titulo);
-          document.getElementById("previewTitulo").dataset.actual = data.titulo;
-        }
+        Object.keys(CAMPOS).forEach(function (campo) {
+          var dato = data[campo];
+          if (dato) {
+            document.getElementById(CAMPOS[campo].preview).src = "/uploads/" + encodeURIComponent(dato);
+            document.getElementById(CAMPOS[campo].preview).dataset.actual = dato;
+            setImagenPresente(campo, true);
+          } else {
+            setImagenPresente(campo, false);
+          }
+        });
       }).catch(function () {});
     }
 
-    document.getElementById("titulo").addEventListener("change", function (e) {
-      var f = e.target.files[0];
-      if (f) { var r = new FileReader(); r.onload = function (ev) { document.getElementById("previewTitulo").src = ev.target.result; }; r.readAsDataURL(f); }
-    });
-    document.getElementById("logo").addEventListener("change", function (e) {
-      var f = e.target.files[0];
-      if (f) { var r = new FileReader(); r.onload = function (ev) { document.getElementById("previewLogo").src = ev.target.result; }; r.readAsDataURL(f); }
-    });
-    document.getElementById("fondo").addEventListener("change", function (e) {
-      var f = e.target.files[0];
-      if (f) { var r = new FileReader(); r.onload = function (ev) { document.getElementById("previewFondo").src = ev.target.result; }; r.readAsDataURL(f); }
-    });
-    document.getElementById("carnetFondo").addEventListener("change", function (e) {
-      var f = e.target.files[0];
-      if (f) { var r = new FileReader(); r.onload = function (ev) { document.getElementById("previewCarnetFondo").src = ev.target.result; }; r.readAsDataURL(f); }
+    function bindImagen(inputId, campo) {
+      document.getElementById(inputId).addEventListener("change", function (e) {
+        var f = e.target.files[0];
+        if (!f) return;
+        var r = new FileReader();
+        r.onload = function (ev) { document.getElementById(CAMPOS[campo].preview).src = ev.target.result; };
+        r.readAsDataURL(f);
+        setImagenPresente(campo, false);
+      });
+    }
+    Object.keys(CAMPOS).forEach(function (campo) { bindImagen(CAMPOS[campo].input, campo); });
+
+    document.querySelectorAll(".quitar-imagen").forEach(function (b) {
+      b.addEventListener("click", function () {
+        eliminarImagen(b.getAttribute("data-campo"));
+      });
     });
 
     function guardar() {
