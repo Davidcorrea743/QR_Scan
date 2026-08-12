@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Carnet - {{NOMBRE}} {{APELLIDO}}</title>
-<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,700;0,800;0,900;1,300;1,400;1,500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <link rel="stylesheet" href="/static/carnet.css">
 </head>
 <body>
@@ -16,11 +19,15 @@
   <div class="escala">
     <div class="carnet" style="background-image: {!CARNET_FONDO_CSS!};">
       <div class="top">{!EMPRESA_TOP_HTML!}</div>
-      <img class="foto" id="fotoEmpleado" alt="">
-      <div class="nombre">{{NOMBRE}} {{APELLIDO}}</div>
-      <div class="cedula">{{CEDULA}}</div>
-      <div class="cargo">{{CARGO}}</div>
-      <div class="qr"><canvas id="qrcode"></canvas></div>
+      <div class="portrait-wrap">
+        <img class="foto" id="fotoEmpleado" alt="">
+      </div>
+      <div class="content">
+        <h1 class="nombre">{{NOMBRE}} {{APELLIDO}}</h1>
+        <div class="cargo">{{CARGO}}</div>
+        <div class="cedula">C.I.: {{CEDULA}}</div>
+        <div class="qr"><canvas id="qrcode"></canvas></div>
+      </div>
     </div>
   </div>
 
@@ -35,7 +42,7 @@
 
     var target = baseUrl + "/perfil/" + {{EMP_ID}};
     var canvas = document.getElementById("qrcode");
-    QRCode.toCanvas(canvas, target, { width: 150, margin: 1, errorCorrectionLevel: "H" }, function (error) {
+    QRCode.toCanvas(canvas, target, { width: 150, margin: 1, errorCorrectionLevel: "H", color: { dark: "#ffffff", light: "#000000" } }, function (error) {
       if (error) { console.error(error); return; }
       var logoSrc = logoEmpresa ? "/uploads/" + encodeURIComponent(logoEmpresa) : "/static/logo-sena.png";
       var logo = new Image();

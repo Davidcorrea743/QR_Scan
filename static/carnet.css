@@ -2,7 +2,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 body {
-  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: "Montserrat", "Segoe UI", Roboto, Arial, sans-serif;
   background: #eef1f6;
   padding: 24px 24px 70px;
   overflow-x: hidden;
@@ -22,7 +22,7 @@ body {
   height: 124mm;
   margin: 0 auto 56px;
   background-image: linear-gradient(135deg, #ffffff, #f4f7fc);
-  background-size: contain;
+  background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
   border-radius: 10px;
@@ -35,22 +35,24 @@ body {
   overflow: hidden;
   position: relative;
 }
-.carnet::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(255,255,255,.72);
-  z-index: 0;
-}
 .carnet > * { position: relative; z-index: 1; flex: 0 0 auto; }
 .carnet .top {
+  position: relative;
   width: 100%;
-  text-align: center;
+  text-align: justify;
   padding: 3mm 4mm 0.5mm;
+  height: 26mm;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
 }
 .carnet .top .logo-empresa {
-  height: 25mm;
-  max-width: 82mm;
+  position: absolute;
+  top: -59px;
+  left: -2px;
+  width: 150px;
+  height: 170%;
+  max-width: 100%;
   object-fit: contain;
 }
 .carnet .top .nombre-empresa {
@@ -58,20 +60,32 @@ body {
   font-size: 4.2mm;
   color: #003362;
   letter-spacing: 0.3px;
+  align-self: center;
+}
+.carnet .portrait-wrap {
+  margin: 6mm 0 2.5mm;
 }
 .carnet .foto {
+  position: relative;
+  z-index: 1;
   width: 26mm;
   height: 26mm;
   border-radius: 50%;
   object-fit: cover;
-  margin: 1mm 0 2.5mm;
   border: 0.8mm solid #ffffff;
   box-shadow: 0 1px 5px rgba(0,0,0,.25);
   background: #e4e8ef;
 }
-.carnet .nombre { font-size: 4.6mm; font-weight: 800; color: #003362; text-align: center; margin-top: 0.8mm; }
-.carnet .cedula { font-size: 3.3mm; color: #4da32f; font-weight: 700; margin-top: 1.2mm; }
-.carnet .cargo { font-size: 3.5mm; color: #004587; font-weight: 700; letter-spacing: 0.2px; background: rgba(0,69,135,.16); padding: 1mm 4mm; border-radius: 4mm; margin-top: 1mm; text-align: center; }
+.carnet .content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+}
+.carnet .nombre { font-size: 4.6mm; font-weight: 800; color: #003362; margin-top: 0.8mm; }
+.carnet .cedula { font-size: 3.3mm; font-weight: 400; font-style: italic; color: #4da32f; margin-top: 1.2mm; }
+.carnet .cargo { font-size: 3.5mm; font-weight: 400; font-style: italic; color: #004587; margin-top: 1mm; text-align: center; background: none; padding: 0; border-radius: 0; letter-spacing: 0; }
 .carnet .qr { margin-top: 1.5mm; margin-bottom: 3mm; }
 .carnet .qr canvas { width: 64px; height: 64px; display: block; }
 
