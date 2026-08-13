@@ -42,7 +42,7 @@
 
     var target = baseUrl + "/perfil/" + {{EMP_ID}};
     var canvas = document.getElementById("qrcode");
-    QRCode.toCanvas(canvas, target, { width: 150, margin: 1, errorCorrectionLevel: "H", color: { dark: "#ffffff", light: "#000000" } }, function (error) {
+    QRCode.toCanvas(canvas, target, { width: 300, margin: 1, errorCorrectionLevel: "H", color: { dark: "#ffffff", light: "rgba(0,0,0,0)" } }, function (error) {
       if (error) { console.error(error); return; }
       var logoSrc = logoEmpresa ? "/uploads/" + encodeURIComponent(logoEmpresa) : "/static/logo-sena.png";
       var logo = new Image();

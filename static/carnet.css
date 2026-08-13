@@ -68,8 +68,9 @@ body {
 .carnet .foto {
   position: relative;
   z-index: 1;
-  width: 26mm;
-  height: 26mm;
+  width: 54mm;
+  height: 54mm;
+  margin-top: -60px;
   border-radius: 50%;
   object-fit: cover;
   border: 0.8mm solid #ffffff;
@@ -86,8 +87,13 @@ body {
 .carnet .nombre { font-size: 4.6mm; font-weight: 800; color: #003362; margin-top: 0.8mm; }
 .carnet .cedula { font-size: 3.3mm; font-weight: 400; font-style: italic; color: #4da32f; margin-top: 1.2mm; }
 .carnet .cargo { font-size: 3.5mm; font-weight: 400; font-style: italic; color: #004587; margin-top: 1mm; text-align: center; background: none; padding: 0; border-radius: 0; letter-spacing: 0; }
-.carnet .qr { margin-top: 1.5mm; margin-bottom: 3mm; }
-.carnet .qr canvas { width: 64px; height: 64px; display: block; }
+.carnet .qr {
+  margin-top: 1.5mm;
+  margin-bottom: 3mm;
+  background: transparent;
+  line-height: 0;
+}
+.carnet .qr canvas { width: 50px; height: 50px; display: block; }
 
 @media print {
   body { background: #fff; padding: 0; }
