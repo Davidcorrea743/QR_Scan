@@ -2,10 +2,11 @@ import base64
 import io
 import json
 import os
+import re
 import urllib.parse
 from html import escape
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
 
 import config
@@ -13,6 +14,14 @@ import database
 import templating
 
 router = APIRouter(tags=["paginas"])
+
+BASE_URL_DEFECTO = "http://127.0.0.1:8000"
+
+
+def _base_url(request: Request) -> str:
+    if config.BASE_URL and config.BASE_URL != BASE_URL_DEFECTO:
+        return config.BASE_URL.rstrip("/")
+    return str(request.base_url).rstrip("/")
 
 ICONOS_RED = {
     "linkedin": {
@@ -42,6 +51,12 @@ ICONOS_RED = {
 }
 
 
+def _mensaje_con_lineas(mensaje: str) -> str:
+    mensaje = mensaje.replace("\r\n", "\n").replace("\r", "\n")
+    mensaje = re.sub(r"(?i)<br\s*/?>", "\n", mensaje)
+    return "<br>".join(escape(line) for line in mensaje.split("\n"))
+
+
 def _empresa_data(conn):
     row = conn.execute("SELECT * FROM empresa WHERE id = 1").fetchone()
     data = dict(row) if row else {}
@@ -64,18 +79,18 @@ async def login_page():
 
 
 @router.get("/admin", include_in_schema=False)
-async def admin_page():
-    return HTMLResponse(templating.render("admin.html", BASE_URL=config.BASE_URL))
+async def admin_page(request: Request):
+    return HTMLResponse(templating.render("admin.html", BASE_URL=_base_url(request)))
 
 
 @router.get("/formulario", include_in_schema=False)
-async def formulario_page():
-    return HTMLResponse(templating.render("formulario.html", BASE_URL=config.BASE_URL))
+async def formulario_page(request: Request):
+    return HTMLResponse(templating.render("formulario.html", BASE_URL=_base_url(request)))
 
 
 @router.get("/config", include_in_schema=False)
-async def config_page():
-    return HTMLResponse(templating.render("config.html", BASE_URL=config.BASE_URL))
+async def config_page(request: Request):
+    return HTMLResponse(templating.render("config.html", BASE_URL=_base_url(request)))
 
 
 @router.get("/generador", include_in_schema=False)
@@ -84,7 +99,7 @@ async def generador_page():
 
 
 @router.get("/carnet/{emp_id}", include_in_schema=False)
-async def carnet_page(emp_id: int):
+async def carnet_page(emp_id: int, request: Request):
     conn = database.get_connection()
     try:
         emp = conn.execute(
@@ -96,6 +111,7 @@ async def carnet_page(emp_id: int):
     if not emp:
         raise HTTPException(status_code=404, detail="Empleado no encontrado")
 
+    base_url = _base_url(request)
     carnet_fondo = empresa.get("carnet_fondo", "") or ""
     carnet_fondo_css = (
         f"url('/uploads/{carnet_fondo}')"
@@ -116,7 +132,7 @@ async def carnet_page(emp_id: int):
     return HTMLResponse(
         templating.render(
             "carnet.html",
-            BASE_URL=config.BASE_URL,
+            BASE_URL=base_url,
             EMPRESA_NOMBRE=empresa.get("nombre", "") or "",
             CARNET_FONDO=carnet_fondo or "",
             CARNET_FONDO_CSS=carnet_fondo_css,
@@ -131,6 +147,78 @@ async def carnet_page(emp_id: int):
     )
 
 
+@router.get("/carnet/{emp_id}/trasero", include_in_schema=False)
+async def carnet_trasero_page(emp_id: int, request: Request):
+    conn = database.get_connection()
+    try:
+        emp = conn.execute(
+            "SELECT * FROM empleados WHERE id = ?", (emp_id,)
+        ).fetchone()
+        empresa = _empresa_data(conn)
+    finally:
+        conn.close()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Empleado no encontrado")
+
+    trasera_fondo = empresa.get("trasera_fondo", "") or ""
+    trasera_fondo_css = (
+        f"url('/uploads/{trasera_fondo}')"
+        if trasera_fondo
+        else "linear-gradient(135deg, #ffffff, #f4f7fc)"
+    )
+    trasera_logo = empresa.get("trasera_logo", "") or ""
+    if trasera_logo:
+        trasera_logo_html = (
+            f'<img class="logo-trasero" src="/uploads/{trasera_logo}" alt="Logo de la empresa">'
+        )
+    else:
+        nombre = escape(empresa.get("nombre") or "")
+        trasera_logo_html = (
+            f'<div class="nombre-trasero">{nombre}</div>' if nombre else ""
+        )
+
+    mensaje = (empresa.get("trasera_mensaje", "") or "").strip()
+    if not mensaje:
+        mensaje = "Gracias por visitarnos, ¡estaremos encantados de atenderte!"
+    trasera_mensaje_html = _mensaje_con_lineas(mensaje)
+
+    correo = (empresa.get("trasera_correo", "") or "").strip()
+    telefono = (empresa.get("trasera_telefono", "") or "").strip()
+
+    iconos = []
+    if correo:
+        iconos.append(
+            '<a class="icono-trasero" href="mailto:' + escape(correo, quote=True) + '">'
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+            'stroke-linecap="round" stroke-linejoin="round">'
+            '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>'
+            f"<span>{escape(correo)}</span></a>"
+        )
+    if telefono:
+        iconos.append(
+            '<a class="icono-trasero" href="tel:' + escape(telefono, quote=True) + '">'
+            '<svg viewBox="0 0 24 24" fill="currentColor">'
+            '<path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 '
+            '1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 '
+            '0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>'
+            f"<span>{escape(telefono)}</span></a>"
+        )
+
+    trasera_contacto_html = (
+        f'<div class="iconos-trasero">{"".join(iconos)}</div>' if iconos else ""
+    )
+
+    return HTMLResponse(
+        templating.render(
+            "carnet-trasero.html",
+            EMPRESA_NOMBRE=empresa.get("nombre", "") or "",
+            TRASERA_FONDO_CSS=trasera_fondo_css,
+            TRASERA_LOGO_HTML=trasera_logo_html,
+            TRASERA_MENSAJE_HTML=trasera_mensaje_html,
+            TRASERA_CONTACTO_HTML=trasera_contacto_html,
+            EMP_ID=emp["id"],
+        )
+    )
 @router.get("/vcard/{emp_id}", include_in_schema=False)
 async def vcard_trabajador(emp_id: int):
     conn = database.get_connection()
@@ -195,7 +283,7 @@ async def vcard_trabajador(emp_id: int):
 
 
 @router.get("/perfil/{emp_id}", include_in_schema=False)
-async def perfil_publico(emp_id: int):
+async def perfil_publico(emp_id: int, request: Request):
     conn = database.get_connection()
     try:
         emp = conn.execute(
@@ -210,7 +298,7 @@ async def perfil_publico(emp_id: int):
     logo = empresa.get("titulo") or empresa.get("logo", "")
     ubicacion = empresa.get("ubicacion", "")
     context = {
-        "BASE_URL": config.BASE_URL,
+        "BASE_URL": _base_url(request),
         "EMPRESA_NOMBRE": empresa.get("nombre", ""),
         "EMPRESA_LOGO": logo,
         "NOMBRE": emp["nombre"],

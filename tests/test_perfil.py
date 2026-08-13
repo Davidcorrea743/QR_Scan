@@ -216,3 +216,111 @@ def test_perfil_carousel_oculto_sin_galeria(client, auth_headers):
     emp_id = crear_empleado(client, auth_headers).json()["id"]
     body = client.get(f"/perfil/{emp_id}").text
     assert "carouselEmpresa" not in body
+
+
+def test_carnet_trasero_pagina(client, auth_headers):
+    client.put(
+        "/api/empresa",
+        data={
+            "nombre": "Empresa Test",
+            "trasera_mensaje": "Ante cualquier inquietud, contáctanos.",
+            "trasera_correo": "contacto@empresa.com",
+            "trasera_telefono": "+58 300 000 0000",
+        },
+        files={
+            "trasera_logo": ("tl.png", png_bytes(), "image/png"),
+            "trasera_fondo": ("tf.png", png_bytes(), "image/png"),
+        },
+        headers=auth_headers,
+    )
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    res = client.get(f"/carnet/{emp_id}/trasero")
+    assert res.status_code == 200
+    body = res.text
+    assert "Ante cualquier inquietud" in body
+    assert "contacto@empresa.com" in body
+    assert "+58 300 000 0000" in body
+    assert "url('/uploads/" in body
+    assert "logo-trasero" in body
+    assert "{{" not in body
+
+
+def test_carnet_trasero_no_existe_404(client):
+    res = client.get("/carnet/99999/trasero")
+    assert res.status_code == 404
+
+
+def test_carnet_trasero_mensaje_por_defecto(client, auth_headers):
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    res = client.get(f"/carnet/{emp_id}/trasero")
+    assert res.status_code == 200
+    body = res.text
+    assert "Gracias por visitarnos" in body
+    assert "{{" not in body
+
+
+def test_carnet_trasero_nombre_si_sin_logo(client, auth_headers):
+    client.put(
+        "/api/empresa", data={"nombre": "Empresa Sin Logo"}, headers=auth_headers
+    )
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    body = client.get(f"/carnet/{emp_id}/trasero").text
+    assert 'class="nombre-trasero">Empresa Sin Logo' in body
+
+
+def test_carnet_trasero_saltos_de_linea(client, auth_headers):
+    client.put(
+        "/api/empresa",
+        data={
+            "trasera_mensaje": (
+                "Este carnet es de uso personal e intransferible.\n\n"
+                "En caso de extravío, por favor comunicarse:"
+            ),
+            "trasera_correo": "contacto@empresa.com",
+        },
+        headers=auth_headers,
+    )
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    body = client.get(f"/carnet/{emp_id}/trasero").text
+    assert "<br><br>" in body
+    assert "Este carnet es de uso personal e intransferible." in body
+    assert "En caso de extravío, por favor comunicarse:" in body
+    assert "{{" not in body
+
+
+def test_carnet_trasero_mensaje_escapa_html(client, auth_headers):
+    client.put(
+        "/api/empresa",
+        data={"trasera_mensaje": "Linea uno<br>Linea dos <b>negrita</b>"},
+        headers=auth_headers,
+    )
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    body = client.get(f"/carnet/{emp_id}/trasero").text
+    assert "<br>" in body
+    assert "negrita" in body
+    assert "<b>negrita</b>" not in body
+
+
+def test_config_empresa_trasera_guardar_y_borrar(client, auth_headers):
+    res = client.put(
+        "/api/empresa",
+        data={
+            "trasera_mensaje": "Mensaje test",
+            "trasera_correo": "a@b.com",
+            "trasera_telefono": "3000000000",
+        },
+        files={"trasera_fondo": ("tf.png", png_bytes(), "image/png")},
+        headers=auth_headers,
+    )
+    assert res.status_code == 200, res.text
+
+    data = client.get("/api/empresa", headers=auth_headers).json()
+    assert data["trasera_mensaje"] == "Mensaje test"
+    assert data["trasera_correo"] == "a@b.com"
+    assert data["trasera_telefono"] == "3000000000"
+    assert data["trasera_fondo"]
+
+    res = client.delete("/api/empresa/imagen/trasera_fondo", headers=auth_headers)
+    assert res.status_code == 200
+    data = client.get("/api/empresa", headers=auth_headers).json()
+    assert not data["trasera_fondo"]

@@ -79,6 +79,39 @@
         </div>
       </div>
 
+      <h3 class="mt20">Parte trasera del carnet</h3>
+      <p class="txtmuted-sm">Logo y fondo de la cara trasera. El mensaje y los datos de contacto se muestran debajo del logo, junto a los iconos de sobre (correo) y teléfono.</p>
+      <div class="form-grid">
+        <div class="full">
+          <label>Mensaje de la parte trasera</label>
+          <textarea id="traseraMensaje" rows="2" placeholder="Ej.: Gracias por visitarnos. Ante cualquier inquietud no dudes en contactarnos."></textarea>
+        </div>
+        <div>
+          <label>Correo de la empresa</label>
+          <input type="email" id="traseraCorreo" placeholder="contacto@empresa.com">
+        </div>
+        <div>
+          <label>Teléfono de la empresa</label>
+          <input type="tel" id="traseraTelefono" placeholder="+58 000 000 0000">
+        </div>
+        <div>
+          <label>Logo (centro de la parte trasera)</label>
+          <input type="file" id="traseraLogo" accept="image/png,image/jpeg,image/webp">
+          <img id="previewTraseraLogo" alt="" class="preview preview-logo">
+          <button type="button" class="btn btn-rojo btn-xs quitar-imagen oculto" data-campo="trasera_logo" title="Quitar imagen" aria-label="Quitar imagen">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          </button>
+        </div>
+        <div>
+          <label>Fondo de la parte trasera</label>
+          <input type="file" id="traseraFondo" accept="image/png,image/jpeg,image/webp">
+          <img id="previewTraseraFondo" alt="" class="preview preview-fondo">
+          <button type="button" class="btn btn-rojo btn-xs quitar-imagen oculto" data-campo="trasera_fondo" title="Quitar imagen" aria-label="Quitar imagen">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          </button>
+        </div>
+      </div>
+
       <div class="flexend mt20">
         <button class="btn btn-borde" onclick="location.href='/admin'">Cancelar</button>
         <button class="btn btn-verde" onclick="guardar()">Guardar configuración</button>
@@ -99,7 +132,9 @@
       titulo: { input: "titulo", preview: "previewTitulo" },
       logo: { input: "logo", preview: "previewLogo" },
       fondo: { input: "fondo", preview: "previewFondo" },
-      carnet_fondo: { input: "carnetFondo", preview: "previewCarnetFondo" }
+      carnet_fondo: { input: "carnetFondo", preview: "previewCarnetFondo" },
+      trasera_logo: { input: "traseraLogo", preview: "previewTraseraLogo" },
+      trasera_fondo: { input: "traseraFondo", preview: "previewTraseraFondo" }
     };
 
     function botonQuitar(campo) {
@@ -170,6 +205,9 @@
       api("/api/empresa").then(function (data) {
         document.getElementById("nombre").value = data.nombre || "";
         document.getElementById("ubicacion").value = data.ubicacion || "";
+        document.getElementById("traseraMensaje").value = data.trasera_mensaje || "";
+        document.getElementById("traseraCorreo").value = data.trasera_correo || "";
+        document.getElementById("traseraTelefono").value = data.trasera_telefono || "";
         renderGaleria(Array.isArray(data.galeria) ? data.galeria : []);
         var redesRaw = data.redes;
         if (typeof redesRaw === "string") {
@@ -264,14 +302,21 @@
       fd.append("nombre", document.getElementById("nombre").value);
       fd.append("redes", JSON.stringify(leerRedes()));
       fd.append("ubicacion", document.getElementById("ubicacion").value);
+      fd.append("trasera_mensaje", document.getElementById("traseraMensaje").value);
+      fd.append("trasera_correo", document.getElementById("traseraCorreo").value);
+      fd.append("trasera_telefono", document.getElementById("traseraTelefono").value);
       var logo = document.getElementById("logo").files[0];
       var fondo = document.getElementById("fondo").files[0];
       var carnetFondo = document.getElementById("carnetFondo").files[0];
       var titulo = document.getElementById("titulo").files[0];
+      var traseraLogo = document.getElementById("traseraLogo").files[0];
+      var traseraFondo = document.getElementById("traseraFondo").files[0];
       if (titulo) fd.append("titulo", titulo);
       if (logo) fd.append("logo", logo);
       if (fondo) fd.append("fondo", fondo);
       if (carnetFondo) fd.append("carnet_fondo", carnetFondo);
+      if (traseraLogo) fd.append("trasera_logo", traseraLogo);
+      if (traseraFondo) fd.append("trasera_fondo", traseraFondo);
 
       api("/api/empresa", { method: "PUT", body: fd }).then(function () {
         var msg = document.getElementById("mensaje");

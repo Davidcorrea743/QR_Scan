@@ -29,7 +29,7 @@ def obtener(user=Depends(require_admin)):
 
 @router.delete("/imagen/{campo}")
 def eliminar_imagen(campo: str, user=Depends(require_admin)):
-    CAMPOS_VALIDOS = {"titulo", "logo", "fondo", "carnet_fondo"}
+    CAMPOS_VALIDOS = {"titulo", "logo", "fondo", "carnet_fondo", "trasera_fondo", "trasera_logo"}
     if campo not in CAMPOS_VALIDOS:
         raise HTTPException(status_code=400, detail="Campo de imagen no válido")
     conn = database.get_connection()
@@ -77,6 +77,11 @@ def actualizar(
     logo: UploadFile = File(None),
     fondo: UploadFile = File(None),
     carnet_fondo: UploadFile = File(None),
+    trasera_fondo: UploadFile = File(None),
+    trasera_logo: UploadFile = File(None),
+    trasera_mensaje: str = Form(None),
+    trasera_correo: str = Form(None),
+    trasera_telefono: str = Form(None),
     galeria: List[UploadFile] = File(None),
     user=Depends(require_admin),
 ):
@@ -95,6 +100,12 @@ def actualizar(
             valores["redes"] = json.dumps(parsed, ensure_ascii=False)
         if ubicacion is not None:
             valores["ubicacion"] = ubicacion.strip()
+        if trasera_mensaje is not None:
+            valores["trasera_mensaje"] = trasera_mensaje.strip()
+        if trasera_correo is not None:
+            valores["trasera_correo"] = trasera_correo.strip()
+        if trasera_telefono is not None:
+            valores["trasera_telefono"] = trasera_telefono.strip()
 
         if galeria:
             try:
@@ -119,6 +130,12 @@ def actualizar(
         if carnet_fondo:
             nuevo_carnet_fondo = media.guardar_imagen(carnet_fondo, "carnet_fondo", normalizar=False)
             valores["carnet_fondo"] = nuevo_carnet_fondo
+        if trasera_fondo:
+            nuevo_trasera_fondo = media.guardar_imagen(trasera_fondo, "trasera_fondo", normalizar=False)
+            valores["trasera_fondo"] = nuevo_trasera_fondo
+        if trasera_logo:
+            nuevo_trasera_logo = media.guardar_imagen(trasera_logo, "trasera_logo", normalizar=False)
+            valores["trasera_logo"] = nuevo_trasera_logo
 
         if not valores:
             raise HTTPException(status_code=400, detail="Sin datos para actualizar")
@@ -143,6 +160,10 @@ def actualizar(
             media.eliminar_archivo(existing["carnet_fondo"])
         if titulo and existing and existing["titulo"] and existing["titulo"] != nuevo_titulo:
             media.eliminar_archivo(existing["titulo"])
+        if trasera_fondo and existing and existing["trasera_fondo"] and existing["trasera_fondo"] != nuevo_trasera_fondo:
+            media.eliminar_archivo(existing["trasera_fondo"])
+        if trasera_logo and existing and existing["trasera_logo"] and existing["trasera_logo"] != nuevo_trasera_logo:
+            media.eliminar_archivo(existing["trasera_logo"])
     finally:
         conn.close()
     return {"ok": True}

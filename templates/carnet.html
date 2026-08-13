@@ -8,11 +8,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,700;0,800;0,900;1,300;1,400;1,500&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-  <link rel="stylesheet" href="/static/carnet.css?v=3">
+  <link rel="stylesheet" href="/static/carnet.css?v=4">
 </head>
 <body>
   <div class="barra">
     <button class="btn-volver" onclick="location.href='/admin'">← Volver al panel</button>
+    <button class="btn-volver" onclick="location.href='/carnet/{{EMP_ID}}/trasero'">Reverso</button>
     <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>
   </div>
 
@@ -43,18 +44,6 @@
     var canvas = document.getElementById("qrcode");
     QRCode.toCanvas(canvas, target, { width: 300, margin: 1, errorCorrectionLevel: "H", color: { dark: "#000000", light: "#ffffff" } }, function (error) {
       if (error) { console.error(error); return; }
-      var ctx = canvas.getContext("2d");
-      var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      var d = img.data;
-      for (var i = 0; i < d.length; i += 4) {
-        var r = d[i], g = d[i + 1], b = d[i + 2];
-        if (r > 250 && g > 250 && b > 250) {
-          d[i + 3] = 0;
-        } else {
-          d[i] = 255; d[i + 1] = 255; d[i + 2] = 255; d[i + 3] = 255;
-        }
-      }
-      ctx.putImageData(img, 0, 0);
       canvas.style.width = "60px";
       canvas.style.height = "60px";
     });

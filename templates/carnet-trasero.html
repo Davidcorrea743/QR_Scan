@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reverso carnet - {{EMPRESA_NOMBRE}}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/carnet.css?v=5">
+</head>
+<body>
+  <div class="barra">
+    <button class="btn-volver" onclick="location.href='/admin'">← Volver al panel</button>
+    <button class="btn-volver" onclick="location.href='/carnet/{{EMP_ID}}'">Frente</button>
+    <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>
+  </div>
+
+  <div class="escala">
+    <div class="carnet carnet-trasero" style="background-image: {!TRASERA_FONDO_CSS!};">
+      <div class="contenido-trasero">
+        <div class="logo-trasero-cont">{!TRASERA_LOGO_HTML!}</div>
+        <p class="mensaje-trasero">{!TRASERA_MENSAJE_HTML!}</p>
+        <div class="contacto-trasero">{!TRASERA_CONTACTO_HTML!}</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

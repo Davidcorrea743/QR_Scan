@@ -69,12 +69,12 @@ body {
   position: relative;
   z-index: 1;
   width: 54mm;
-  height: 54mm;
+  height: 55mm;
   margin-top: -60px;
   border-radius: 50%;
   object-fit: cover;
   border: 0.8mm solid #ffffff;
-  box-shadow: 0 1px 5px rgba(0,0,0,.25);
+  /*box-shadow: 0 1px 5px rgba(0,0,0,.25);*/
   background: #e4e8ef;
 }
 .carnet .content {
@@ -85,25 +85,115 @@ body {
   align-items: center;
   text-align: center;
   width: 100%;
+  transform: translateX(8%);
 }
-.carnet .nombre { font-size: 4.6mm; font-weight: 800; color: #003362; margin-top: 0.8mm; }
-.carnet .cedula { font-size: 3.3mm; font-weight: 400; font-style: italic; color: #4da32f; margin-top: 1.2mm; }
-.carnet .cargo { font-size: 3.5mm; font-weight: 400; font-style: italic; color: #004587; margin-top: 1mm; text-align: center; background: none; padding: 0; border-radius: 0; letter-spacing: 0; }
+.carnet .nombre { 
+  font-size: 4.6mm; 
+  font-weight: 800; 
+  color: #ffffff; 
+  margin-top: 7.8mm; 
+}
+
+.carnet .cedula { 
+  font-size: 3.3mm; 
+  font-weight: 400; 
+  /*font-style: italic; */
+  color: #ffffff; 
+  margin-top: 1.2mm; 
+}
+.carnet .cargo { 
+  font-size: 3.5mm; 
+  font-weight: 400; 
+  /*font-style: italic; */
+  color: #ffffff; 
+  margin-top: 1mm; 
+  text-align: center; 
+  background: none; 
+  padding: 0; 
+  border-radius: 0; 
+  letter-spacing: 0; 
+}
+
 .carnet .qr {
   position: relative;
   z-index: 10;
   margin-top: 1.5mm;
   margin-bottom: 3mm;
-  background: #003362;
-  border-radius: 3mm;
-  padding: 2mm;
   line-height: 0;
 }
 .carnet .qr canvas { position: relative; z-index: 10; width: 60px; height: 60px; display: block; }
+
+/* ---------- Reverso ---------- */
+.carnet-trasero {
+  justify-content: center;
+  padding: 10mm 8mm;
+}
+.contenido-trasero {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+}
+.logo-trasero-cont { margin-bottom: 6mm; }
+.logo-trasero {
+  width: auto;
+  max-width: 36mm;
+  max-height: 32mm;
+  object-fit: contain;
+}
+.nombre-trasero {
+  font-weight: 800;
+  font-size: 5.2mm;
+  color: #003362;
+  letter-spacing: 0.2px;
+}
+.mensaje-trasero {
+  margin: 0;
+  color: #fff;
+  font-size: 2.4mm;
+  font-weight: 500;
+  line-height: 2.55;
+  max-width: 62mm;
+}
+.iconos-trasero {
+  margin-top: 6mm;
+  display: flex;
+  flex-direction: column;
+  gap: 3mm;
+  align-items: center;
+  width: 100%;
+}
+.icono-trasero {
+  display: inline-flex;
+  align-items: center;
+  gap: 2.6mm;
+  color: #003362;
+  text-decoration: none;
+  background: #ffffff;
+  border-radius: 7mm;
+  padding: 2.6mm 6mm;
+  border: 1px solid #d8dee8;
+  box-shadow: 0 1px 4px rgba(0, 51, 98, .12);
+  max-width: 100%;
+}
+.icono-trasero svg {
+  width: 5.2mm;
+  height: 5.2mm;
+  flex: 0 0 auto;
+}
+.icono-trasero span {
+  font-size: 3.2mm;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
 
 @media print {
   body { background: #fff; padding: 0; }
   .barra { display: none; }
   .escala { transform: none; }
   .carnet { box-shadow: none; margin: 0 auto; border-radius: 0; border: none; }
+  .icono-trasero { box-shadow: none; }
 }
