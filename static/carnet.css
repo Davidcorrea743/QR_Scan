@@ -125,8 +125,8 @@ body {
 
 /* ---------- Reverso ---------- */
 .carnet-trasero {
-  justify-content: center;
-  padding: 10mm 8mm;
+  justify-content: flex-start;
+  padding: 9mm 8mm;
 }
 .contenido-trasero {
   position: relative;
@@ -137,12 +137,13 @@ body {
   text-align: center;
   width: 100%;
 }
-.logo-trasero-cont { margin-bottom: 6mm; }
+.logo-trasero-cont { margin-bottom: 4mm; }
 .logo-trasero {
   width: auto;
-  max-width: 36mm;
-  max-height: 32mm;
+  max-width: 50mm;
+  max-height: 50mm;
   object-fit: contain;
+  margin-top: -86px;
 }
 .nombre-trasero {
   font-weight: 800;

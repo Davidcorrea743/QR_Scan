@@ -6,7 +6,7 @@
   <title>{{NOMBRE}} {{APELLIDO}} - {{EMPRESA_NOMBRE}}</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="/static/perfil.css">
+  <link rel="stylesheet" href="/static/perfil.css?v=3">
 </head>
 <body>
 
@@ -78,6 +78,29 @@
 
   </main>
 
+  <!-- Visor de imagen en grande -->
+  <div id="luzBox" class="luz-lb oculto">
+    <div class="luz-barra">
+      <button id="luzCerrar" class="luz-btn" aria-label="Cerrar" title="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="luz-scroll" id="luzScroll">
+      <img id="luzImg" class="luz-img" alt="Imagen ampliada de la empresa">
+    </div>
+    <div class="luz-pie">
+      <button id="luzZoomOut" class="luz-btn" aria-label="Alejar" title="Alejar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg>
+      </button>
+      <button id="luzZoomIn" class="luz-btn" aria-label="Acercar" title="Acercar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button id="luzZoomReset" class="luz-btn" aria-label="Restablecer zoom" title="Restablecer">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>
+      </button>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     var foto = "{{FOTO}}";
@@ -122,6 +145,103 @@
     }
 
     try { fetch("{{BASE_URL}}" + "/scan", { mode: "no-cors" }); } catch (e) {}
+
+    var luzBox = document.getElementById("luzBox");
+    var luzImg = document.getElementById("luzImg");
+    var luzScroll = document.getElementById("luzScroll");
+
+    var escala = 1;
+    var baseW = 0;
+    var baseEscala = 1;
+    var distInicial = 0;
+
+    function capturarBase() {
+      var w = luzImg.offsetWidth;
+      if (!w && luzImg.getBoundingClientRect) w = luzImg.getBoundingClientRect().width;
+      if (!w && luzImg.naturalWidth) w = luzImg.naturalWidth;
+      baseW = w || 0;
+    }
+
+    function aplicarZoom(nuevaEscala) {
+      if (!baseW) capturarBase();
+      escala = Math.min(5, Math.max(0.5, nuevaEscala));
+      if (escala >= 1) {
+        luzImg.style.width = (baseW * escala) + "px";
+        luzImg.style.maxWidth = "none";
+        luzImg.style.maxHeight = "none";
+      } else {
+        luzImg.style.width = "";
+        luzImg.style.maxWidth = "";
+        luzImg.style.maxHeight = "";
+      }
+    }
+
+    function resetZoom() {
+      escala = 1;
+      luzImg.style.width = "";
+      luzImg.style.maxWidth = "";
+      luzImg.style.maxHeight = "";
+      luzScroll.scrollTop = 0;
+      luzScroll.scrollLeft = 0;
+    }
+
+    function abrirVisor(src) {
+      luzImg.src = src;
+      resetZoom();
+      luzImg.style.maxHeight = (window.innerHeight - 170) + "px";
+      luzBox.classList.remove("oculto");
+      document.body.style.overflow = "hidden";
+    }
+
+    function cerrarVisor() {
+      luzBox.classList.add("oculto");
+      document.body.style.overflow = "";
+      luzImg.removeAttribute("src");
+      resetZoom();
+    }
+
+    document.addEventListener("click", function (e) {
+      var img = e.target.closest ? e.target.closest(".img-galeria") : null;
+      if (img) abrirVisor(img.src);
+    });
+
+    luzImg.addEventListener("load", function () { setTimeout(capturarBase, 0); });
+
+    document.getElementById("luzCerrar").addEventListener("click", cerrarVisor);
+    document.getElementById("luzZoomIn").addEventListener("click", function () { aplicarZoom(escala + 0.25); });
+    document.getElementById("luzZoomOut").addEventListener("click", function () { aplicarZoom(escala - 0.25); });
+    document.getElementById("luzZoomReset").addEventListener("click", resetZoom);
+
+    luzScroll.addEventListener("click", function (e) {
+      if (e.target === luzScroll) cerrarVisor();
+    });
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !luzBox.classList.contains("oculto")) cerrarVisor();
+    });
+
+    function distancia(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
+
+    luzScroll.addEventListener("touchstart", function (e) {
+      if (e.touches.length === 2) {
+        baseEscala = escala;
+        distInicial = distancia(e.touches);
+        luzScroll.style.touchAction = "none";
+      }
+    }, { passive: true });
+
+    luzScroll.addEventListener("touchmove", function (e) {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        var d = distancia(e.touches);
+        if (distInicial > 0) aplicarZoom(baseEscala * (d / distInicial));
+      }
+    }, { passive: false });
+
+    luzScroll.addEventListener("touchend", function () {
+      distInicial = 0;
+      luzScroll.style.touchAction = "";
+    }, { passive: true });
   </script>
 </body>
 </html>

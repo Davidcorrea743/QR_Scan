@@ -141,6 +141,82 @@ body {
 .img-galeria { max-height: 360px; object-fit: cover; border-radius: 12px; }
 .carousel-control-prev, .carousel-control-next { width: 8%; }
 
+/* ---------- Visor de imagen en grande ---------- */
+.img-galeria { cursor: zoom-in; }
+.luz-lb {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  height: 100vh;
+  height: 100dvh;
+  z-index: 2000;
+  background: rgba(0, 0, 0, .95);
+  display: flex;
+  flex-direction: column;
+}
+.luz-lb.oculto { display: none !important; }
+.luz-barra {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+}
+.luz-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  padding: 0 12px;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+  scrollbar-width: none;
+}
+.luz-scroll::-webkit-scrollbar { display: none; }
+.luz-img {
+  display: block;
+  max-width: 94%;
+  max-height: calc(100vh - 170px);
+  max-height: calc(100dvh - 170px);
+  width: auto;
+  height: auto;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .5);
+  margin: auto;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.luz-pie {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0 calc(14px + env(safe-area-inset-bottom));
+}
+.luz-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, .3);
+  background: rgba(255, 255, 255, .16);
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+  transition: transform .1s ease, background .15s ease;
+}
+.luz-btn svg { width: 22px; height: 22px; }
+.luz-btn:hover { background: rgba(255, 255, 255, .32); }
+.luz-btn:active { transform: scale(.9); }
+
 /* ---------- Pie ---------- */
 .pie { text-align: center; color: #8f9bb0; font-size: 13px; margin-top: 6px; }
 .pie-empresa { color: #003362; font-weight: 700; font-size: 15px; }
