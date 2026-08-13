@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,700;0,800;0,900;1,300;1,400;1,500&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-  <link rel="stylesheet" href="/static/carnet.css">
+  <link rel="stylesheet" href="/static/carnet.css?v=3">
 </head>
 <body>
   <div class="barra">
@@ -26,14 +26,13 @@
         <h1 class="nombre">{{NOMBRE}} {{APELLIDO}}</h1>
         <div class="cargo">{{CARGO}}</div>
         <div class="cedula">C.I.: {{CEDULA}}</div>
-        <div class="qr"><canvas id="qrcode"></canvas></div>
+        <div class="qr"><canvas id="qrcode" style="width: 60px; height: 60px; display: block;"></canvas></div>
       </div>
     </div>
   </div>
 
   <script>
     var baseUrl = "{{BASE_URL}}";
-    var logoEmpresa = "{{EMPRESA_LOGO}}";
     var foto = "{{FOTO}}";
 
     var fotoEl = document.getElementById("fotoEmpleado");
@@ -42,23 +41,22 @@
 
     var target = baseUrl + "/perfil/" + {{EMP_ID}};
     var canvas = document.getElementById("qrcode");
-    QRCode.toCanvas(canvas, target, { width: 300, margin: 1, errorCorrectionLevel: "H", color: { dark: "#ffffff", light: "rgba(0,0,0,0)" } }, function (error) {
+    QRCode.toCanvas(canvas, target, { width: 300, margin: 1, errorCorrectionLevel: "H", color: { dark: "#000000", light: "#ffffff" } }, function (error) {
       if (error) { console.error(error); return; }
-      var logoSrc = logoEmpresa ? "/uploads/" + encodeURIComponent(logoEmpresa) : "/static/logo-sena.png";
-      var logo = new Image();
-      logo.crossOrigin = "anonymous";
-      logo.onload = function () {
-        var ctx = canvas.getContext("2d");
-        var logoSize = canvas.width * 0.22;
-        var x = (canvas.width - logoSize) / 2;
-        var y = (canvas.height - logoSize) / 2;
-        var pad = 3;
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(x - pad, y - pad, logoSize + pad * 2, logoSize + pad * 2);
-        ctx.drawImage(logo, x, y, logoSize, logoSize);
-      };
-      logo.onerror = function () {};
-      logo.src = logoSrc;
+      var ctx = canvas.getContext("2d");
+      var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      var d = img.data;
+      for (var i = 0; i < d.length; i += 4) {
+        var r = d[i], g = d[i + 1], b = d[i + 2];
+        if (r > 250 && g > 250 && b > 250) {
+          d[i + 3] = 0;
+        } else {
+          d[i] = 255; d[i + 1] = 255; d[i + 2] = 255; d[i + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+      canvas.style.width = "60px";
+      canvas.style.height = "60px";
     });
   </script>
 </body>

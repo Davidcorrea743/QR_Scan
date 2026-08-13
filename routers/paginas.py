@@ -96,13 +96,13 @@ async def carnet_page(emp_id: int):
     if not emp:
         raise HTTPException(status_code=404, detail="Empleado no encontrado")
 
-    carnet_fondo = empresa.get("carnet_fondo", "")
+    carnet_fondo = empresa.get("carnet_fondo", "") or ""
     carnet_fondo_css = (
         f"url('/uploads/{carnet_fondo}')"
         if carnet_fondo
         else "linear-gradient(135deg, #ffffff, #f4f7fc)"
     )
-    logo = empresa.get("titulo") or empresa.get("logo", "")
+    logo = empresa.get("titulo") or empresa.get("logo", "") or ""
     if logo:
         empresa_top_html = (
             f'<img class="logo-empresa" src="/uploads/{logo}" alt="Logo de la empresa">'
@@ -117,9 +117,8 @@ async def carnet_page(emp_id: int):
         templating.render(
             "carnet.html",
             BASE_URL=config.BASE_URL,
-            EMPRESA_NOMBRE=empresa.get("nombre", ""),
-            EMPRESA_LOGO=empresa.get("logo", ""),
-            CARNET_FONDO=carnet_fondo,
+            EMPRESA_NOMBRE=empresa.get("nombre", "") or "",
+            CARNET_FONDO=carnet_fondo or "",
             CARNET_FONDO_CSS=carnet_fondo_css,
             EMPRESA_TOP_HTML=empresa_top_html,
             EMP_ID=emp["id"],

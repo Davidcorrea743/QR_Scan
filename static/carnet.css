@@ -78,6 +78,8 @@ body {
   background: #e4e8ef;
 }
 .carnet .content {
+  position: relative;
+  z-index: 5;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -88,12 +90,16 @@ body {
 .carnet .cedula { font-size: 3.3mm; font-weight: 400; font-style: italic; color: #4da32f; margin-top: 1.2mm; }
 .carnet .cargo { font-size: 3.5mm; font-weight: 400; font-style: italic; color: #004587; margin-top: 1mm; text-align: center; background: none; padding: 0; border-radius: 0; letter-spacing: 0; }
 .carnet .qr {
+  position: relative;
+  z-index: 10;
   margin-top: 1.5mm;
   margin-bottom: 3mm;
-  background: transparent;
+  background: #003362;
+  border-radius: 3mm;
+  padding: 2mm;
   line-height: 0;
 }
-.carnet .qr canvas { width: 50px; height: 50px; display: block; }
+.carnet .qr canvas { position: relative; z-index: 10; width: 60px; height: 60px; display: block; }
 
 @media print {
   body { background: #fff; padding: 0; }
