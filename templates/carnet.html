@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,700;0,800;0,900;1,300;1,400;1,500&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-  <link rel="stylesheet" href="/static/carnet.css?v=4">
+  <link rel="stylesheet" href="/static/carnet.css?v=7">
 </head>
 <body>
   <div class="barra">
@@ -27,7 +27,7 @@
         <h1 class="nombre">{{NOMBRE}} {{APELLIDO}}</h1>
         <div class="cargo">{{CARGO}}</div>
         <div class="cedula">C.I.: {{CEDULA}}</div>
-        <div class="qr"><canvas id="qrcode" style="width: 60px; height: 60px; display: block;"></canvas></div>
+        <div class="qr"><canvas id="qrcode" style="width: 38px; height: 38px; display: block;"></canvas></div>
       </div>
     </div>
   </div>
@@ -44,8 +44,8 @@
     var canvas = document.getElementById("qrcode");
     QRCode.toCanvas(canvas, target, { width: 300, margin: 1, errorCorrectionLevel: "H", color: { dark: "#000000", light: "#ffffff" } }, function (error) {
       if (error) { console.error(error); return; }
-      canvas.style.width = "60px";
-      canvas.style.height = "60px";
+      canvas.style.width = "38px";
+      canvas.style.height = "38px";
     });
   </script>
 </body>

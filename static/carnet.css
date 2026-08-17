@@ -1,4 +1,4 @@
-@page { size: 85.6mm 120mm; margin: 0; }
+@page { size: 55mm 85mm; margin: 0; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 body {
@@ -18,14 +18,14 @@ body {
 }
 
 .carnet {
-  width: 85.6mm;
-  height: 124mm;
-  margin: 0 auto 56px;
+  width: 55mm;
+  height: 85mm;
+  margin: 0 auto 40px;
   background-image: linear-gradient(135deg, #ffffff, #f4f7fc);
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid #d8dee8;
   box-shadow: 0 6px 20px rgba(0,51,98,.18);
   display: flex;
@@ -40,41 +40,40 @@ body {
   position: relative;
   width: 100%;
   text-align: justify;
-  padding: 3mm 4mm 0.5mm;
-  height: 26mm;
+  padding: 2mm 2.5mm 0.5mm;
+  height: 15mm;
   display: flex;
   justify-content: flex-start;
   align-items: flex-start;
 }
 .carnet .top .logo-empresa {
   position: absolute;
-  top: -59px;
+  top: -30px;
   left: -2px;
-  width: 150px;
-  height: 170%;
+  width: 92px;
+  height: 160%;
   max-width: 100%;
   object-fit: contain;
 }
 .carnet .top .nombre-empresa {
   font-weight: 700;
-  font-size: 4.2mm;
+  font-size: 3.4mm;
   color: #003362;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   align-self: center;
 }
 .carnet .portrait-wrap {
-  margin: 6mm 0 2.5mm;
+  margin: 3mm 0 1.5mm;
 }
 .carnet .foto {
   position: relative;
   z-index: 1;
-  width: 54mm;
-  height: 55mm;
-  margin-top: -60px;
+  width: 33mm;
+  height: 34mm;
+  margin-top: -19px;
   border-radius: 50%;
   object-fit: cover;
-  border: 0.8mm solid #ffffff;
-  /*box-shadow: 0 1px 5px rgba(0,0,0,.25);*/
+  border: 0.6mm solid #ffffff;
   background: #e4e8ef;
 }
 .carnet .content {
@@ -85,28 +84,25 @@ body {
   align-items: center;
   text-align: center;
   width: 100%;
-  transform: translateX(8%);
 }
 .carnet .nombre { 
-  font-size: 4.6mm; 
+  font-size: 2.4mm; 
   font-weight: 800; 
   color: #ffffff; 
-  margin-top: 7.8mm; 
+  margin-top: 7.5mm; 
 }
 
 .carnet .cedula { 
-  font-size: 3.3mm; 
+  font-size: 1.6mm; 
   font-weight: 400; 
-  /*font-style: italic; */
   color: #ffffff; 
-  margin-top: 1.2mm; 
+  margin-top: 0.8mm; 
 }
 .carnet .cargo { 
-  font-size: 3.5mm; 
+  font-size: 1.8mm; 
   font-weight: 400; 
-  /*font-style: italic; */
   color: #ffffff; 
-  margin-top: 1mm; 
+  margin-top: 0.8mm; 
   text-align: center; 
   background: none; 
   padding: 0; 
@@ -117,16 +113,19 @@ body {
 .carnet .qr {
   position: relative;
   z-index: 10;
-  margin-top: 1.5mm;
-  margin-bottom: 3mm;
+  margin-top: 1.2mm;
+  margin-bottom: 2mm;
+  background: #ffffff;
+  border-radius: 3.5mm;
+  padding: 1.5mm;
   line-height: 0;
 }
-.carnet .qr canvas { position: relative; z-index: 10; width: 60px; height: 60px; display: block; }
+.carnet .qr canvas { position: relative; z-index: 10; width: 38px; height: 38px; display: block; }
 
 /* ---------- Reverso ---------- */
 .carnet-trasero {
   justify-content: flex-start;
-  padding: 9mm 8mm;
+  padding: 6mm 5mm;
 }
 .contenido-trasero {
   position: relative;
@@ -137,57 +136,52 @@ body {
   text-align: center;
   width: 100%;
 }
-.logo-trasero-cont { margin-bottom: 4mm; }
+.logo-trasero-cont { margin-bottom: 2mm; }
 .logo-trasero {
   width: auto;
-  max-width: 50mm;
-  max-height: 50mm;
+  max-width: 34mm;
+  max-height: 34mm;
   object-fit: contain;
-  margin-top: -86px;
+  margin-top: -60px;
 }
 .nombre-trasero {
   font-weight: 800;
-  font-size: 5.2mm;
+  font-size: 4.6mm;
   color: #003362;
   letter-spacing: 0.2px;
 }
 .mensaje-trasero {
   margin: 0;
   color: #fff;
-  font-size: 2.4mm;
-  font-weight: 500;
-  line-height: 2.55;
-  max-width: 62mm;
+  font-size: 2.6mm;
+  font-weight: 600;
+  line-height: 1.6;
+  max-width: 44mm;
 }
 .iconos-trasero {
-  margin-top: 6mm;
+  margin-top: 3mm;
   display: flex;
   flex-direction: column;
-  gap: 3mm;
+  gap: 2.5mm;
   align-items: center;
   width: 100%;
 }
 .icono-trasero {
   display: inline-flex;
   align-items: center;
-  gap: 2.6mm;
-  color: #003362;
+  gap: 2mm;
+  color: #ffffff;
   text-decoration: none;
-  background: #ffffff;
-  border-radius: 7mm;
-  padding: 2.6mm 6mm;
-  border: 1px solid #d8dee8;
-  box-shadow: 0 1px 4px rgba(0, 51, 98, .12);
   max-width: 100%;
 }
 .icono-trasero svg {
-  width: 5.2mm;
-  height: 5.2mm;
+  width: 4.8mm;
+  height: 4.8mm;
   flex: 0 0 auto;
 }
 .icono-trasero span {
-  font-size: 3.2mm;
-  font-weight: 600;
+  font-size: 2.8mm;
+  font-weight: 700;
   overflow-wrap: anywhere;
 }
 

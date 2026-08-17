@@ -126,6 +126,13 @@ body {
   font-size: 17px;
 }
 .btn-wa:hover { background: #1eb85a; color: #FFFFFF; }
+.btn-callcenter {
+  grid-column: 1 / -1;
+  background: #128c7e;
+  color: #FFFFFF;
+  font-size: 17px;
+}
+.btn-callcenter:hover { background: #0e7569; color: #FFFFFF; }
 .btn-borde {
   background: #FFFFFF;
   color: #1D2A44;

@@ -218,6 +218,14 @@ def test_perfil_carousel_oculto_sin_galeria(client, auth_headers):
     assert "carouselEmpresa" not in body
 
 
+def test_perfil_call_center(client, auth_headers):
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    body = client.get(f"/perfil/{emp_id}").text
+    assert "Call Center" in body
+    assert 'href="tel:+582128195400"' in body
+    assert "bi-headset" in body
+
+
 def test_carnet_trasero_pagina(client, auth_headers):
     client.put(
         "/api/empresa",
