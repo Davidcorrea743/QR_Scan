@@ -43,6 +43,14 @@ def test_carnet_pagina(client, auth_headers):
     assert "Desarrollador" in res.text
 
 
+def test_carnet_boton_copiar_url(client, auth_headers):
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    body = client.get(f"/carnet/{emp_id}").text
+    assert "Copiar URL" in body
+    assert "function copiarURL" in body
+    assert f'"/perfil/" + {emp_id}' in body
+
+
 def test_carnet_no_existe_404(client):
     res = client.get("/carnet/99999")
     assert res.status_code == 404
@@ -102,7 +110,31 @@ def test_carnet_con_fondo_de_empresa(client, auth_headers):
     emp_id = crear_empleado(client, auth_headers).json()["id"]
     res = client.get(f"/carnet/{emp_id}")
     assert res.status_code == 200
-    assert "url('/uploads/" in res.text
+    assert 'class="marco-derecho"' in res.text
+
+
+def test_carnet_sin_marco_derecho(client, auth_headers):
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    body = client.get(f"/carnet/{emp_id}").text
+    assert 'class="marco-derecho"' not in body
+
+
+def test_carnet_marco_izquierdo(client, auth_headers):
+    client.put(
+        "/api/empresa",
+        data={"nombre": "Empresa Test"},
+        files={"fondo": ("marco.png", png_bytes(), "image/png")},
+        headers=auth_headers,
+    )
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    body = client.get(f"/carnet/{emp_id}").text
+    assert 'class="marco-izquierdo"' in body
+
+
+def test_carnet_sin_marco_izquierdo(client, auth_headers):
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    body = client.get(f"/carnet/{emp_id}").text
+    assert 'class="marco-izquierdo"' not in body
 
 
 def test_config_empresa_redes_invalidas(client, auth_headers):

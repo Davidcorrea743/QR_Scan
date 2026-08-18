@@ -8,17 +8,20 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,700;0,800;0,900;1,300;1,400;1,500&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-  <link rel="stylesheet" href="/static/carnet.css?v=7">
+  <link rel="stylesheet" href="/static/carnet.css?v=11">
 </head>
 <body>
   <div class="barra">
     <button class="btn-volver" onclick="location.href='/admin'">← Volver al panel</button>
     <button class="btn-volver" onclick="location.href='/carnet/{{EMP_ID}}/trasero'">Reverso</button>
     <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>
+    <button class="btn-copiar" onclick="copiarURL()">Copiar URL</button>
   </div>
 
   <div class="escala">
     <div class="carnet" style="background-image: {!CARNET_FONDO_CSS!};">
+      {!MARCO_IZQUIERDO_HTML!}
+      {!MARCO_DERECHO_HTML!}
       <div class="top">{!EMPRESA_TOP_HTML!}</div>
       <div class="portrait-wrap">
         <img class="foto" id="fotoEmpleado" alt="">
@@ -47,6 +50,28 @@
       canvas.style.width = "38px";
       canvas.style.height = "38px";
     });
+
+    function copiarURL() {
+      var url = baseUrl + "/perfil/" + {{EMP_ID}};
+      var btn = document.querySelector(".btn-copiar");
+      var aviso = function () {
+        var viejo = btn.textContent;
+        btn.textContent = "¡URL copiada!";
+        setTimeout(function () { btn.textContent = viejo; }, 1500);
+      };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(url).then(aviso);
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = url;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand("copy"); aviso(); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+    }
   </script>
 </body>
 </html>

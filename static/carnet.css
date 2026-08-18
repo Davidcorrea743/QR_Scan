@@ -7,10 +7,12 @@ body {
   padding: 24px 24px 70px;
   overflow-x: hidden;
 }
-.barra { max-width: 340px; margin: 0 auto 22px; display: flex; gap: 10px; }
-.barra button { flex: 1; border: 0; border-radius: 8px; padding: 11px; font-weight: 600; cursor: pointer; font-size: 14px; }
+.barra { max-width: 340px; margin: 0 auto 22px; display: flex; flex-wrap: wrap; gap: 10px; }
+.barra button { flex: 1 1 130px; border: 0; border-radius: 8px; padding: 11px; font-weight: 600; cursor: pointer; font-size: 14px; }
 .btn-imprimir { background: #4da32f; color: #fff; }
 .btn-volver { background: #fff; color: #1c2733; border: 1px solid #d6dbe4; }
+.btn-copiar { background: #003362; color: #fff; }
+.btn-copiar:hover { background: #004587; color: #fff; }
 
 .escala {
   transform: scale(1.5);
@@ -36,6 +38,24 @@ body {
   position: relative;
 }
 .carnet > * { position: relative; z-index: 1; flex: 0 0 auto; }
+.carnet .marco-izquierdo,
+.carnet .marco-derecho {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  mix-blend-mode: darken;
+}
+.carnet .marco-izquierdo {
+  object-position: left center;
+  z-index: 0;
+}
+.carnet .marco-derecho {
+  z-index: 1;
+}
 .carnet .top {
   position: relative;
   width: 100%;
@@ -68,13 +88,14 @@ body {
 .carnet .foto {
   position: relative;
   z-index: 1;
-  width: 33mm;
-  height: 34mm;
-  margin-top: -19px;
+  width: 31mm;
+  height: 33mm;
+  margin-top: -25px;
   border-radius: 50%;
   object-fit: cover;
   border: 0.6mm solid #ffffff;
   background: #e4e8ef;
+  margin-left: -10px;
 }
 .carnet .content {
   position: relative;
@@ -86,20 +107,20 @@ body {
   width: 100%;
 }
 .carnet .nombre { 
-  font-size: 2.4mm; 
+  font-size: 3.4mm; 
   font-weight: 800; 
   color: #ffffff; 
-  margin-top: 7.5mm; 
+  margin-top: 3.5mm; 
 }
 
 .carnet .cedula { 
-  font-size: 1.6mm; 
+  font-size: 2.6mm; 
   font-weight: 400; 
   color: #ffffff; 
   margin-top: 0.8mm; 
 }
 .carnet .cargo { 
-  font-size: 1.8mm; 
+  font-size: 2.8mm; 
   font-weight: 400; 
   color: #ffffff; 
   margin-top: 0.8mm; 

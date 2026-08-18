@@ -112,12 +112,19 @@ async def carnet_page(emp_id: int, request: Request):
         raise HTTPException(status_code=404, detail="Empleado no encontrado")
 
     base_url = _base_url(request)
-    carnet_fondo = empresa.get("carnet_fondo", "") or ""
-    carnet_fondo_css = (
-        f"url('/uploads/{carnet_fondo}')"
-        if carnet_fondo
-        else "linear-gradient(135deg, #ffffff, #f4f7fc)"
+    marco_izquierdo = empresa.get("fondo", "") or ""
+    marco_izquierdo_html = (
+        f'<img class="marco-izquierdo" src="/uploads/{marco_izquierdo}" alt="">'
+        if marco_izquierdo
+        else ""
     )
+    marco_derecho = empresa.get("carnet_fondo", "") or ""
+    marco_derecho_html = (
+        f'<img class="marco-derecho" src="/uploads/{marco_derecho}" alt="">'
+        if marco_derecho
+        else ""
+    )
+    carnet_fondo_css = "linear-gradient(135deg, #ffffff, #f4f7fc)"
     logo = empresa.get("titulo") or empresa.get("logo", "") or ""
     if logo:
         empresa_top_html = (
@@ -134,8 +141,10 @@ async def carnet_page(emp_id: int, request: Request):
             "carnet.html",
             BASE_URL=base_url,
             EMPRESA_NOMBRE=empresa.get("nombre", "") or "",
-            CARNET_FONDO=carnet_fondo or "",
+            CARNET_FONDO=marco_derecho or "",
             CARNET_FONDO_CSS=carnet_fondo_css,
+            MARCO_IZQUIERDO_HTML=marco_izquierdo_html,
+            MARCO_DERECHO_HTML=marco_derecho_html,
             EMPRESA_TOP_HTML=empresa_top_html,
             EMP_ID=emp["id"],
             NOMBRE=emp["nombre"],
