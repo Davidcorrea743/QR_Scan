@@ -33,6 +33,7 @@
             <input type="checkbox" id="verInactivos" onchange="cargarEmpleados()" class="wauto"> Ver inactivos
           </label>
           <button class="btn btn-verde oculto" id="btnNuevo" onclick="location.href='/formulario'">+ Nuevo empleado</button>
+          <button class="btn btn-borde oculto" id="btnCargaMasiva" onclick="abrirCargaMasiva()">Carga masiva</button>
         </div>
       </div>
 
@@ -84,11 +85,54 @@
 
     var esAdmin = getRol() === "admin";
 
+    function abrirCargaMasiva() {
+      var modal = document.getElementById("modal");
+      modal.classList.remove("oculto");
+      modal.innerHTML =
+        '<div class="modal-overlay">' +
+        '<div class="tarjeta modal-panel">' +
+        '<h2>Carga masiva de empleados</h2>' +
+        '<p class="txtmuted-sm mt4 mb16">Adjunta el CSV con las columnas <strong>nombre, apellido, cargo, cedula, telefono, correo</strong> (la columna <strong>foto</strong> es opcional). Luego el ZIP con las fotos nombradas por cédula, ej. <strong>12345678.jpg</strong>.</p>' +
+        '<div class="mb12"><label>Archivo CSV *</label><input id="cm_csv" type="file" accept=".csv"></div>' +
+        '<div class="mb16"><label>Fotos (ZIP, opcional)</label><input id="cm_zip" type="file" accept=".zip"></div>' +
+        '<div id="resultadoCarga" class="mb16"></div>' +
+        '<div class="modal-actions">' +
+        '<button class="btn btn-borde" onclick="document.getElementById(\'modal\').classList.add(\'oculto\')">Cancelar</button>' +
+        '<button class="btn btn-primario" onclick="cargarMasiva()">Cargar</button>' +
+        '</div></div></div>';
+    }
+
+    function cargarMasiva() {
+      var csv = document.getElementById("cm_csv").files[0];
+      if (!csv) { alert("Selecciona el archivo CSV"); return; }
+      var fd = new FormData();
+      fd.append("archivo", csv);
+      var zip = document.getElementById("cm_zip").files[0];
+      if (zip) fd.append("zip_fotos", zip);
+      api("/api/empleados/carga-masiva", { method: "POST", body: fd }).then(function (data) {
+        var html = '<div class="aviso m0">' +
+          '<p class="m0"><strong>Importados:</strong> ' + data.importados + '</p>' +
+          '<p class="m0"><strong>Omitidos (ya existían):</strong> ' + data.omitidos.length +
+          (data.omitidos.length ? ' — ' + esc(data.omitidos.join(", ")) : '') + '</p>' +
+          (data.errores.length
+            ? '<p class="m0 mt4"><strong>Errores:</strong></p><ul class="m0 mt4">' +
+              data.errores.map(function (e) {
+                return '<li>Fila ' + e.fila + ': ' + esc(e.motivo) + '</li>';
+              }).join("") +
+              '</ul>'
+            : '') +
+          '</div>';
+        document.getElementById("resultadoCarga").innerHTML = html;
+        cargarEmpleados();
+      }).catch(mostrarError);
+    }
+
     function mostrarUsuario() {
       document.getElementById("nombreUsuario").textContent = getUsername();
       document.getElementById("rolUsuario").textContent = getRol();
       document.getElementById("btnConfig").classList.toggle("oculto", !esAdmin);
       document.getElementById("btnNuevo").classList.toggle("oculto", !esAdmin);
+      document.getElementById("btnCargaMasiva").classList.toggle("oculto", !esAdmin);
       document.getElementById("cardUsuarios").classList.toggle("oculto", !esAdmin);
     }
 

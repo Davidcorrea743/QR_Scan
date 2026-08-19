@@ -95,6 +95,10 @@
           <input type="tel" id="traseraTelefono" placeholder="+58 000 000 0000">
         </div>
         <div>
+          <label>RIF de la empresa</label>
+          <input type="text" id="traseraRif" placeholder="J411377260">
+        </div>
+        <div>
           <label>Logo (centro de la parte trasera)</label>
           <input type="file" id="traseraLogo" accept="image/png,image/jpeg,image/webp">
           <img id="previewTraseraLogo" alt="" class="preview preview-logo">
@@ -207,6 +211,7 @@
         document.getElementById("ubicacion").value = data.ubicacion || "";
         document.getElementById("traseraMensaje").value = data.trasera_mensaje || "";
         document.getElementById("traseraCorreo").value = data.trasera_correo || "";
+        document.getElementById("traseraRif").value = data.trasera_rif || "";
         document.getElementById("traseraTelefono").value = data.trasera_telefono || "";
         renderGaleria(Array.isArray(data.galeria) ? data.galeria : []);
         var redesRaw = data.redes;
@@ -305,6 +310,7 @@
       fd.append("trasera_mensaje", document.getElementById("traseraMensaje").value);
       fd.append("trasera_correo", document.getElementById("traseraCorreo").value);
       fd.append("trasera_telefono", document.getElementById("traseraTelefono").value);
+      fd.append("trasera_rif", document.getElementById("traseraRif").value);
       var logo = document.getElementById("logo").files[0];
       var fondo = document.getElementById("fondo").files[0];
       var carnetFondo = document.getElementById("carnetFondo").files[0];

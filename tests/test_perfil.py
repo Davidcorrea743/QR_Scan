@@ -290,6 +290,36 @@ def test_carnet_trasero_no_existe_404(client):
     assert res.status_code == 404
 
 
+def test_carnet_trasero_rif_por_defecto(client, auth_headers):
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    res = client.get(f"/carnet/{emp_id}/trasero")
+    assert res.status_code == 200
+    assert "RIF: J411377260" in res.text
+
+
+def test_carnet_trasero_rif_configurable(client, auth_headers):
+    client.put(
+        "/api/empresa",
+        data={"trasera_rif": "J-555555555"},
+        headers=auth_headers,
+    )
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    res = client.get(f"/carnet/{emp_id}/trasero")
+    assert res.status_code == 200
+    assert "RIF: J-555555555" in res.text
+
+
+def test_carnet_trasero_rif_guardado_config(client, auth_headers):
+    res = client.put(
+        "/api/empresa",
+        data={"trasera_rif": "J411377260"},
+        headers=auth_headers,
+    )
+    assert res.status_code == 200
+    data = client.get("/api/empresa", headers=auth_headers).json()
+    assert data["trasera_rif"] == "J411377260"
+
+
 def test_carnet_trasero_mensaje_por_defecto(client, auth_headers):
     emp_id = crear_empleado(client, auth_headers).json()["id"]
     res = client.get(f"/carnet/{emp_id}/trasero")

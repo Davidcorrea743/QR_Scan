@@ -1,5 +1,4 @@
 import os
-import shutil
 import uuid
 
 from fastapi import HTTPException, UploadFile
@@ -20,10 +19,16 @@ def guardar_imagen(upload: UploadFile, prefijo: str, normalizar: bool = True) ->
             status_code=400,
             detail="Formato de imagen no permitido. Usa PNG, JPG o WEBP.",
         )
-    nombre = f"{prefijo}_{uuid.uuid4().hex}{_extension(upload.filename)}"
+    return guardar_imagen_bytes(upload.file.read(), upload.filename, prefijo, normalizar)
+
+
+def guardar_imagen_bytes(
+    datos: bytes, nombre_original: str, prefijo: str, normalizar: bool = True
+) -> str:
+    nombre = f"{prefijo}_{uuid.uuid4().hex}{_extension(nombre_original)}"
     ruta = os.path.join(database.UPLOADS_DIR, nombre)
     with open(ruta, "wb") as f:
-        shutil.copyfileobj(upload.file, f)
+        f.write(datos)
     if normalizar:
         _normalizar_foto(ruta)
     return nombre

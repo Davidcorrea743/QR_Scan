@@ -193,18 +193,21 @@ async def carnet_trasero_page(emp_id: int, request: Request):
 
     correo = (empresa.get("trasera_correo", "") or "").strip()
     telefono = (empresa.get("trasera_telefono", "") or "").strip()
+    rif = (empresa.get("trasera_rif", "") or "").strip() or "J411377260"
 
-    iconos = []
+    partes = []
     if correo:
-        iconos.append(
+        partes.append(
             '<a class="icono-trasero" href="mailto:' + escape(correo, quote=True) + '">'
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
             'stroke-linecap="round" stroke-linejoin="round">'
             '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>'
             f"<span>{escape(correo)}</span></a>"
         )
+    if rif:
+        partes.append(f'<div class="rif-trasero">RIF: {escape(rif)}</div>')
     if telefono:
-        iconos.append(
+        partes.append(
             '<a class="icono-trasero" href="tel:' + escape(telefono, quote=True) + '">'
             '<svg viewBox="0 0 24 24" fill="currentColor">'
             '<path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 '
@@ -214,7 +217,7 @@ async def carnet_trasero_page(emp_id: int, request: Request):
         )
 
     trasera_contacto_html = (
-        f'<div class="iconos-trasero">{"".join(iconos)}</div>' if iconos else ""
+        f'<div class="iconos-trasero">{"".join(partes)}</div>' if partes else ""
     )
 
     return HTMLResponse(

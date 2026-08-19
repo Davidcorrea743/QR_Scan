@@ -82,6 +82,7 @@ def actualizar(
     trasera_mensaje: str = Form(None),
     trasera_correo: str = Form(None),
     trasera_telefono: str = Form(None),
+    trasera_rif: str = Form(None),
     galeria: List[UploadFile] = File(None),
     user=Depends(require_admin),
 ):
@@ -106,6 +107,8 @@ def actualizar(
             valores["trasera_correo"] = trasera_correo.strip()
         if trasera_telefono is not None:
             valores["trasera_telefono"] = trasera_telefono.strip()
+        if trasera_rif is not None:
+            valores["trasera_rif"] = trasera_rif.strip()
 
         if galeria:
             try:

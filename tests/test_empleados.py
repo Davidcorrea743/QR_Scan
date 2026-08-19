@@ -1,6 +1,10 @@
 import io
+import os
+import zipfile
 
 from PIL import Image
+
+import database
 
 DATOS = {
     "nombre": "Juan",
@@ -130,3 +134,126 @@ def test_empleado_no_existe_404(client, auth_headers):
     assert res.status_code == 404
     res = client.put("/api/empleados/99999", data={"telefono": "1"}, headers=auth_headers)
     assert res.status_code == 404
+
+
+def zip_con_fotos(**fotos):
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for nombre, datos in fotos.items():
+            z.writestr(nombre, datos)
+    return buf.getvalue()
+
+
+def post_csv(client, headers, texto, zip_bytes=None):
+    files = {"archivo": ("data.csv", texto.encode("utf-8"), "text/csv")}
+    if zip_bytes is not None:
+        files["zip_fotos"] = ("fotos.zip", zip_bytes, "application/zip")
+    return client.post("/api/empleados/carga-masiva", files=files, headers=headers)
+
+
+def test_carga_masiva_basica(client, auth_headers):
+    csv_texto = (
+        "nombre,apellido,cargo,cedula,telefono,correo\n"
+        "Ana,López,Analista,123,111,ana@x.com\n"
+        "Luis,García,Técnico,456,222,luis@x.com\n"
+    )
+    res = post_csv(client, auth_headers, csv_texto)
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data["importados"] == 2
+    assert data["omitidos"] == []
+    assert data["errores"] == []
+
+    empleados = client.get("/api/empleados", headers=auth_headers).json()["empleados"]
+    assert len(empleados) == 2
+    assert empleados[0]["correo"] == "ana@x.com"
+
+
+def test_carga_masiva_fila_invalida(client, auth_headers):
+    csv_texto = "nombre,apellido\nAna,López\n, García\n"
+    res = post_csv(client, auth_headers, csv_texto)
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data["importados"] == 1
+    assert data["errores"] == [{"fila": 3, "motivo": "Faltan nombre o apellido."}]
+
+
+def test_carga_masiva_cedula_duplicada_se_omite(client, auth_headers):
+    crear_empleado(client, auth_headers)
+    csv_texto = "nombre,apellido,cedula\nAna,López,1090123456\nLuis,García,777\n"
+    res = post_csv(client, auth_headers, csv_texto)
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data["importados"] == 1
+    assert data["omitidos"] == ["1090123456"]
+    assert data["errores"] == []
+
+
+def test_carga_masiva_separador_punto_coma(client, auth_headers):
+    csv_texto = "nombre;apellido;cedula\nAna;López;123\n"
+    res = post_csv(client, auth_headers, csv_texto)
+    assert res.status_code == 200, res.text
+    assert res.json()["importados"] == 1
+
+
+def test_carga_masiva_encabezados_con_tildes(client, auth_headers):
+    csv_texto = "Nombre;Apellido;Cédula\nAna;López;123\n"
+    res = post_csv(client, auth_headers, csv_texto)
+    assert res.status_code == 200, res.text
+    assert res.json()["importados"] == 1
+
+
+def test_carga_masiva_foto_por_cedula(client, auth_headers):
+    csv_texto = "nombre,apellido,cedula\nAna,López,12345678\n"
+    res = post_csv(client, auth_headers, csv_texto, zip_con_fotos(**{"12345678.jpg": png_bytes()}))
+    assert res.status_code == 200, res.text
+    assert res.json()["importados"] == 1
+
+    emp = client.get("/api/empleados", headers=auth_headers).json()["empleados"][0]
+    assert emp["foto"]
+    assert os.path.exists(os.path.join(database.UPLOADS_DIR, emp["foto"]))
+
+
+def test_carga_masiva_foto_por_columna(client, auth_headers):
+    csv_texto = "nombre,apellido,cedula,foto\nAna,López,12345678,ana.jpg\n"
+    res = post_csv(client, auth_headers, csv_texto, zip_con_fotos(**{"ana.jpg": png_bytes()}))
+    assert res.status_code == 200, res.text
+    assert res.json()["importados"] == 1
+    emp = client.get("/api/empleados", headers=auth_headers).json()["empleados"][0]
+    assert emp["foto"]
+
+
+def test_carga_masiva_foto_invalida_no_bloquea(client, auth_headers):
+    csv_texto = "nombre,apellido,cedula\nAna,López,12345678\n"
+    res = post_csv(
+        client, auth_headers, csv_texto, zip_con_fotos(**{"12345678.jpg": b"no es imagen"})
+    )
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data["importados"] == 1
+    assert data["errores"][0]["motivo"] == "Foto no válida; se creó sin foto."
+    emp = client.get("/api/empleados", headers=auth_headers).json()["empleados"][0]
+    assert not emp["foto"]
+
+
+def test_carga_masiva_sin_encabezados_obligatorios(client, auth_headers):
+    res = post_csv(client, auth_headers, "solo,nombre\n1,2\n")
+    assert res.status_code == 400
+
+
+def test_carga_masiva_zip_invalido(client, auth_headers):
+    csv_texto = "nombre,apellido\nAna,López\n"
+    res = post_csv(client, auth_headers, csv_texto, b"esto no es un zip")
+    assert res.status_code == 400
+
+
+def test_carga_masiva_editor_no_puede(client, auth_headers):
+    tok = token_editor(client, auth_headers)
+    h = {"Authorization": f"Bearer {tok}"}
+    res = post_csv(client, h, "nombre,apellido\nAna,López\n")
+    assert res.status_code == 403
+
+
+def test_carga_masiva_sin_auth(client):
+    res = post_csv(client, {}, "nombre,apellido\nAna,López\n")
+    assert res.status_code == 401

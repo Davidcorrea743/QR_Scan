@@ -97,7 +97,7 @@ def _migrar_columnas(conn):
     if "galeria" not in columnas:
         cur.execute("ALTER TABLE empresa ADD COLUMN galeria TEXT")
         conn.commit()
-    for columna in ("trasera_fondo", "trasera_logo", "trasera_mensaje", "trasera_correo", "trasera_telefono"):
+    for columna in ("trasera_fondo", "trasera_logo", "trasera_mensaje", "trasera_correo", "trasera_telefono", "trasera_rif"):
         columnas = [row["name"] for row in cur.execute("PRAGMA table_info(empresa)").fetchall()]
         if columna not in columnas:
             cur.execute(f"ALTER TABLE empresa ADD COLUMN {columna} TEXT")

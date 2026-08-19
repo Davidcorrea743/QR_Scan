@@ -205,6 +205,13 @@ body {
   font-weight: 700;
   overflow-wrap: anywhere;
 }
+.rif-trasero {
+  margin-top: 1mm;
+  color: #fff;
+  font-size: 2.8mm;
+  font-weight: 700;
+  margin-left: 22px;
+}
 
 @media print {
   body { background: #fff; padding: 0; }
