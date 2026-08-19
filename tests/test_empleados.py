@@ -5,6 +5,7 @@ import zipfile
 from PIL import Image
 
 import database
+from normalizar import normalizar_correo, normalizar_nombre
 
 DATOS = {
     "nombre": "Juan",
@@ -106,7 +107,7 @@ def test_admin_edita_todos_los_campos(client, auth_headers):
     )
     assert res.status_code == 200
     emp = client.get(f"/api/empleados/{emp_id}", headers=auth_headers).json()
-    assert emp["cargo"] == "Líder técnico"
+    assert emp["cargo"] == "Líder Técnico"
     assert emp["cedula"] == "777777"
 
 
@@ -257,3 +258,90 @@ def test_carga_masiva_editor_no_puede(client, auth_headers):
 def test_carga_masiva_sin_auth(client):
     res = post_csv(client, {}, "nombre,apellido\nAna,López\n")
     assert res.status_code == 401
+
+
+def test_normalizar_nombre():
+    assert normalizar_nombre("pEpITO PereZ") == "Pepito Perez"
+    assert normalizar_nombre("  MARIA   DE LOS ANGELES  ") == "Maria de los Angeles"
+    assert normalizar_nombre("PÉREZ") == "Pérez"
+    assert normalizar_nombre("JUAN CARLOS") == "Juan Carlos"
+    assert normalizar_nombre("") == ""
+    assert normalizar_nombre("   ") == ""
+
+
+def test_normalizar_cargo_con_siglas():
+    assert normalizar_nombre("desaRROLLAdoR") == "Desarrollador"
+    assert normalizar_nombre("JEFE DE RRHH", conservar_siglas=True) == "Jefe de Rrhh"
+    assert normalizar_nombre("Desarrollador RRHH", conservar_siglas=True) == "Desarrollador RRHH"
+    assert normalizar_nombre("ANALISTA DE SISTEMAS", conservar_siglas=True) == "Analista de Sistemas"
+
+
+def test_normalizar_correo():
+    assert normalizar_correo("JUAN@Empresa.com") == "juan@empresa.com"
+    assert normalizar_correo("  A@B.com  ") == "a@b.com"
+
+
+def test_crear_empleado_normaliza_datos(client, auth_headers):
+    res = client.post(
+        "/api/empleados",
+        data={
+            "nombre": "pEpITO",
+            "apellido": "PereZ",
+            "cedula": "V-123",
+            "cargo": "desaRROLLAdoR",
+            "correo": "JUAN@Empresa.com",
+            "telefono": "  +58 000  ",
+        },
+        headers=auth_headers,
+    )
+    assert res.status_code == 200, res.text
+    emp = client.get("/api/empleados", headers=auth_headers).json()["empleados"][0]
+    assert emp["nombre"] == "Pepito"
+    assert emp["apellido"] == "Perez"
+    assert emp["cargo"] == "Desarrollador"
+    assert emp["correo"] == "juan@empresa.com"
+
+
+def test_actualizar_normaliza_datos(client, auth_headers):
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    res = client.put(
+        f"/api/empleados/{emp_id}",
+        data={"cargo": "JEFE DE RRHH", "correo": "NUEVO@Empresa.com"},
+        headers=auth_headers,
+    )
+    assert res.status_code == 200
+    emp = client.get(f"/api/empleados/{emp_id}", headers=auth_headers).json()
+    assert emp["cargo"] == "Jefe de Rrhh"
+    assert emp["correo"] == "nuevo@empresa.com"
+
+
+def test_carga_masiva_normaliza_datos(client, auth_headers):
+    csv_texto = "nombre,apellido,cargo,cedula,correo\npEpITO,PereZ,desaRROLLAdoR,123,JUAN@Empresa.com\n"
+    res = post_csv(client, auth_headers, csv_texto)
+    assert res.status_code == 200, res.text
+    assert res.json()["importados"] == 1
+    emp = client.get("/api/empleados", headers=auth_headers).json()["empleados"][0]
+    assert emp["nombre"] == "Pepito"
+    assert emp["apellido"] == "Perez"
+    assert emp["cargo"] == "Desarrollador"
+    assert emp["correo"] == "juan@empresa.com"
+
+
+def test_normalizacion_datos_existentes(client):
+    conn = database.get_connection()
+    conn.execute(
+        "INSERT INTO empleados (nombre, apellido, cargo, correo) VALUES (?, ?, ?, ?)",
+        ("pEpITO", "PereZ", "desaRROLLAdoR", "JUAN@Empresa.com"),
+    )
+    conn.commit()
+    conn.close()
+
+    database.init_database()
+
+    conn = database.get_connection()
+    row = conn.execute("SELECT * FROM empleados").fetchone()
+    conn.close()
+    assert row["nombre"] == "Pepito"
+    assert row["apellido"] == "Perez"
+    assert row["cargo"] == "Desarrollador"
+    assert row["correo"] == "juan@empresa.com"

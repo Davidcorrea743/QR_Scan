@@ -74,6 +74,7 @@ def init_database():
     )
     conn.commit()
     _migrar_columnas(conn)
+    _normalizar_datos(conn)
     _seed_admin(conn)
     conn.close()
 
@@ -102,6 +103,34 @@ def _migrar_columnas(conn):
         if columna not in columnas:
             cur.execute(f"ALTER TABLE empresa ADD COLUMN {columna} TEXT")
             conn.commit()
+    cur.close()
+
+
+def _normalizar_datos(conn):
+    """Normaliza datos existentes (idempotente): se ejecuta en cada arranque y
+    solo actualiza las filas cuyo texto cambia con la normalización."""
+    from normalizar import normalizar_correo, normalizar_nombre
+
+    cur = conn.cursor()
+    for row in cur.execute(
+        "SELECT id, nombre, apellido, cargo, correo FROM empleados"
+    ).fetchall():
+        nuevo_nombre = normalizar_nombre(row["nombre"])
+        nuevo_apellido = normalizar_nombre(row["apellido"])
+        nuevo_cargo = normalizar_nombre(row["cargo"], conservar_siglas=True)
+        nuevo_correo = normalizar_correo(row["correo"])
+        if (nuevo_nombre, nuevo_apellido, nuevo_cargo, nuevo_correo) != (
+            row["nombre"],
+            row["apellido"],
+            row["cargo"],
+            row["correo"],
+        ):
+            cur.execute(
+                "UPDATE empleados SET nombre = ?, apellido = ?, cargo = ?, correo = ?, "
+                "updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (nuevo_nombre, nuevo_apellido, nuevo_cargo, nuevo_correo, row["id"]),
+            )
+    conn.commit()
     cur.close()
 
 

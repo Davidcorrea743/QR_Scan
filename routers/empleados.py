@@ -8,10 +8,9 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 import database
 import media
 from auth import get_current_user, require_admin
+from normalizar import normalizar_correo, normalizar_nombre
 
 router = APIRouter(prefix="/empleados", tags=["empleados"])
-
-CAMPOS_EDITOR = {"telefono", "correo"}
 
 TILDES = str.maketrans(
     "áéíóúüñÁÉÍÓÚÜÑ",
@@ -131,8 +130,8 @@ def carga_masiva(
             for r in conn.execute("SELECT cedula FROM empleados").fetchall()
         }
         for i, fila in enumerate(filas, start=2):
-            nombre = (fila.get("nombre") or "").strip()
-            apellido = (fila.get("apellido") or "").strip()
+            nombre = normalizar_nombre((fila.get("nombre") or "").strip())
+            apellido = normalizar_nombre((fila.get("apellido") or "").strip())
             cedula = (fila.get("cedula") or "").strip()
             if not nombre or not apellido:
                 errores.append({"fila": i, "motivo": "Faltan nombre o apellido."})
@@ -152,8 +151,8 @@ def carga_masiva(
                     nombre,
                     apellido,
                     cedula,
-                    (fila.get("cargo") or "").strip(),
-                    (fila.get("correo") or "").strip(),
+                    normalizar_nombre((fila.get("cargo") or "").strip(), conservar_siglas=True),
+                    normalizar_correo((fila.get("correo") or "").strip()),
                     (fila.get("telefono") or "").strip(),
                     nombre_foto,
                 ),
@@ -199,11 +198,11 @@ def crear(
             "INSERT INTO empleados (nombre, apellido, cedula, cargo, correo, telefono, foto) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
-                nombre.strip(),
-                apellido.strip(),
+                normalizar_nombre(nombre),
+                normalizar_nombre(apellido),
                 cedula.strip(),
-                cargo.strip(),
-                correo.strip(),
+                normalizar_nombre(cargo, conservar_siglas=True),
+                normalizar_correo(correo),
                 telefono.strip(),
                 nombre_foto,
             ),
@@ -237,21 +236,23 @@ def actualizar(
 
         valores = {}
         if user["rol"] == "admin":
-            for k, v in (
-                ("nombre", nombre),
-                ("apellido", apellido),
-                ("cedula", cedula),
-                ("cargo", cargo),
-                ("correo", correo),
-                ("telefono", telefono),
-            ):
-                if v is not None:
-                    valores[k] = v.strip()
+            if nombre is not None:
+                valores["nombre"] = normalizar_nombre(nombre)
+            if apellido is not None:
+                valores["apellido"] = normalizar_nombre(apellido)
+            if cedula is not None:
+                valores["cedula"] = cedula.strip()
+            if cargo is not None:
+                valores["cargo"] = normalizar_nombre(cargo, conservar_siglas=True)
+            if correo is not None:
+                valores["correo"] = normalizar_correo(correo)
+            if telefono is not None:
+                valores["telefono"] = telefono.strip()
         else:
-            for k in CAMPOS_EDITOR:
-                v = {"telefono": telefono, "correo": correo}[k]
-                if v is not None:
-                    valores[k] = v.strip()
+            if correo is not None:
+                valores["correo"] = normalizar_correo(correo)
+            if telefono is not None:
+                valores["telefono"] = telefono.strip()
 
         if foto:
             nuevo = media.guardar_imagen(foto, "empleado")
