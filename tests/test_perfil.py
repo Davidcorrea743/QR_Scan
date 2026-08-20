@@ -294,7 +294,8 @@ def test_carnet_trasero_rif_por_defecto(client, auth_headers):
     emp_id = crear_empleado(client, auth_headers).json()["id"]
     res = client.get(f"/carnet/{emp_id}/trasero")
     assert res.status_code == 200
-    assert "RIF: J411377260" in res.text
+    assert "J411377260" in res.text
+    assert "RIF:" not in res.text
 
 
 def test_carnet_trasero_rif_configurable(client, auth_headers):
@@ -306,7 +307,7 @@ def test_carnet_trasero_rif_configurable(client, auth_headers):
     emp_id = crear_empleado(client, auth_headers).json()["id"]
     res = client.get(f"/carnet/{emp_id}/trasero")
     assert res.status_code == 200
-    assert "RIF: J-555555555" in res.text
+    assert "J-555555555" in res.text
 
 
 def test_carnet_trasero_rif_guardado_config(client, auth_headers):

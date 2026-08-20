@@ -204,13 +204,14 @@ body {
   font-size: 2.8mm;
   font-weight: 700;
   overflow-wrap: anywhere;
+  margin-left: -6px;
 }
 .rif-trasero {
   margin-top: 1mm;
   color: #fff;
   font-size: 2.8mm;
   font-weight: 700;
-  margin-left: 22px;
+  margin-left: 3px;
 }
 
 @media print {

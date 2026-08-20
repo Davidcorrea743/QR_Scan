@@ -204,8 +204,6 @@ async def carnet_trasero_page(emp_id: int, request: Request):
             '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>'
             f"<span>{escape(correo)}</span></a>"
         )
-    if rif:
-        partes.append(f'<div class="rif-trasero">RIF: {escape(rif)}</div>')
     if telefono:
         partes.append(
             '<a class="icono-trasero" href="tel:' + escape(telefono, quote=True) + '">'
@@ -215,6 +213,8 @@ async def carnet_trasero_page(emp_id: int, request: Request):
             '0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>'
             f"<span>{escape(telefono)}</span></a>"
         )
+    if rif:
+        partes.append(f'<div class="rif-trasero">{escape(rif)}</div>')
 
     trasera_contacto_html = (
         f'<div class="iconos-trasero">{"".join(partes)}</div>' if partes else ""
