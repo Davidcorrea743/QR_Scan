@@ -3,7 +3,8 @@ import io
 import os
 import zipfile
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import StreamingResponse
 
 import database
 import media
@@ -164,6 +165,42 @@ def carga_masiva(
     finally:
         conn.close()
     return {"importados": importados, "omitidos": omitidos, "errores": errores}
+
+
+@router.get("/carnets/zip")
+def descargar_carnets(request: Request, user=Depends(require_admin)):
+    conn = database.get_connection()
+    try:
+        empleados = conn.execute(
+            "SELECT * FROM empleados WHERE activo = 1 ORDER BY apellido, nombre"
+        ).fetchall()
+    finally:
+        conn.close()
+    if not empleados:
+        raise HTTPException(status_code=400, detail="No hay empleados activos para descargar.")
+
+    from urllib.parse import urlparse
+
+    from carnets_pdf import generar_zip_carnets
+
+    puerto = urlparse(str(request.base_url)).port or 8000
+    base_local = f"http://127.0.0.1:{puerto}"
+    try:
+        datos = generar_zip_carnets([dict(e) for e in empleados], base_local)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "No se pudieron generar los PDFs: Chromium no está disponible. "
+                "En el servidor ejecuta: sudo .venv/bin/python -m playwright install-deps chromium. "
+                f"(Detalle: {str(exc)[:200]})"
+            ),
+        ) from exc
+    return StreamingResponse(
+        io.BytesIO(datos),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="carnets_frontales.zip"'},
+    )
 
 
 @router.get("/{emp_id}")

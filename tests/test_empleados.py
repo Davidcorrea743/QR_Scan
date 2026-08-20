@@ -5,6 +5,7 @@ import zipfile
 from PIL import Image
 
 import database
+from carnets_pdf import nombre_archivo_pdf
 from normalizar import normalizar_correo, normalizar_nombre
 
 DATOS = {
@@ -345,3 +346,62 @@ def test_normalizacion_datos_existentes(client):
     assert row["apellido"] == "Perez"
     assert row["cargo"] == "Desarrollador"
     assert row["correo"] == "juan@empresa.com"
+
+
+def test_nombre_archivo_pdf():
+    assert nombre_archivo_pdf({"id": 5, "nombre": "Juan", "apellido": "Pérez", "cedula": "123"}) == "Pérez_Juan_123.pdf"
+    assert nombre_archivo_pdf({"id": 5, "nombre": "  Ana", "apellido": "De Los Ríos", "cedula": ""}) == "De_Los_Ríos_Ana_5.pdf"
+    assert nombre_archivo_pdf({"id": 5, "nombre": "Juan", "apellido": "", "cedula": "A:1"}) == "sin_apellido_Juan_A1.pdf"
+
+
+def test_descargar_carnets_zip_solo_activos(client, auth_headers, monkeypatch):
+    crear_empleado(client, auth_headers)
+    emp2 = client.post(
+        "/api/empleados",
+        data={**DATOS, "nombre": "Luis", "cedula": "777"},
+        headers=auth_headers,
+    ).json()["id"]
+    client.delete(f"/api/empleados/{emp2}", headers=auth_headers)
+
+    def fake_generar(empleados, base_url):
+        assert len(empleados) == 1
+        assert empleados[0]["cedula"] == "1090123456"
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            for e in empleados:
+                z.writestr(nombre_archivo_pdf(e), b"%PDF-fake")
+        return buf.getvalue()
+
+    monkeypatch.setattr("carnets_pdf.generar_zip_carnets", fake_generar)
+    res = client.get("/api/empleados/carnets/zip", headers=auth_headers)
+    assert res.status_code == 200, res.text
+    assert res.headers["content-type"] == "application/zip"
+    with zipfile.ZipFile(io.BytesIO(res.content)) as zf:
+        assert zf.namelist() == ["Pérez_Juan_1090123456.pdf"]
+
+
+def test_descargar_carnets_zip_requiere_admin(client, auth_headers):
+    tok = token_editor(client, auth_headers)
+    res = client.get(
+        "/api/empleados/carnets/zip", headers={"Authorization": f"Bearer {tok}"}
+    )
+    assert res.status_code == 403
+    res = client.get("/api/empleados/carnets/zip")
+    assert res.status_code == 401
+
+
+def test_descargar_carnets_zip_sin_empleados(client, auth_headers):
+    res = client.get("/api/empleados/carnets/zip", headers=auth_headers)
+    assert res.status_code == 400
+
+
+def test_descargar_carnets_zip_error_claro(client, auth_headers, monkeypatch):
+    crear_empleado(client, auth_headers)
+
+    def explota(empleados, base_url):
+        raise RuntimeError("BrowserType.launch: libnspr4.so")
+
+    monkeypatch.setattr("carnets_pdf.generar_zip_carnets", explota)
+    res = client.get("/api/empleados/carnets/zip", headers=auth_headers)
+    assert res.status_code == 500
+    assert "playwright install-deps" in res.json()["detail"]

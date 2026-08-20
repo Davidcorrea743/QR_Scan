@@ -194,7 +194,24 @@ Formatos permitidos: **.jpg, .jpeg, .png, .webp**.
 
 ---
 
-## 7. Reglas automáticas del sistema
+## 7. Descarga masiva de carnets (PDF)
+
+Si necesitas los carnets **frontales** de todos los empleados (por ejemplo para imprimirlos), el sistema genera un **ZIP con un PDF por empleado**, listos para imprimir. La parte trasera no se descarga porque no cambia por empleado.
+
+1. En el panel, pulsa **Descargar carnets** (visible solo para administradores).
+
+![Botón de descarga masiva](img/09-descargar-carnets.png)
+
+2. El botón mostrará *"Generando PDFs…"* mientras se crean los archivos (puede tardar unos minutos según cuántos empleados haya).
+3. Al terminar, tu navegador descarga automáticamente un archivo llamado **`carnets_frontales.zip`**.
+4. Descomprímelo: dentro hay **un PDF por empleado**, con el nombre `Apellido_Nombre_Cedula.pdf` (ej. `Pérez_Juan_12345678.pdf`).
+
+> ℹ️ Solo se incluyen los empleados **activos** (los que aparecen en la lista sin estar desactivados).
+> 💡 Cada PDF tiene el tamaño exacto del carnet (55 × 85 mm), igual que el botón **Imprimir** de cada carnet.
+
+---
+
+## 8. Reglas automáticas del sistema
 
 Para que los carnets se vean limpios y uniformes, el sistema **normaliza** los datos sin que hagas nada:
 
@@ -245,5 +262,6 @@ Cada imagen está en la carpeta `img/` junto a este manual, con el nombre indica
 | 06 | `06-resultado.png` | Resumen de resultados tras cargar (importados / omitidos / errores). |
 | 07 | `07-excel.png` | Archivo de Excel con las columnas llenas (una fila por empleado). |
 | 08 | `08-zip-fotos.png` | Carpeta con fotos nombradas por cédula (ej. `12345678.jpg`). |
+| 09 | `09-descargar-carnets.png` | Panel con el botón **Descargar carnets** visible. |
 
 > 📌 El manual se puede entregar junto con la carpeta `img/` para que las imágenes se vean correctamente.
