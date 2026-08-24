@@ -203,6 +203,44 @@ def descargar_carnets(request: Request, user=Depends(require_admin)):
     )
 
 
+@router.get("/{emp_id}/carnet-pdf")
+def generar_carnet_pdf(emp_id: int, request: Request):
+    conn = database.get_connection()
+    try:
+        emp = conn.execute(
+            "SELECT * FROM empleados WHERE id = ? AND activo = 1", (emp_id,)
+        ).fetchone()
+    finally:
+        conn.close()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Empleado no encontrado")
+
+    from urllib.parse import urlparse
+
+    from carnets_pdf import generar_pdf_carnet, nombre_archivo_pdf
+
+    puerto = urlparse(str(request.base_url)).port or 8000
+    base_local = f"http://127.0.0.1:{puerto}"
+    try:
+        datos = generar_pdf_carnet(dict(emp), base_local)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "No se pudo generar el PDF. "
+                f"(Detalle: {str(exc)[:200]})"
+            ),
+        ) from exc
+    emp_dict = dict(emp)
+    return StreamingResponse(
+        io.BytesIO(datos),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{nombre_archivo_pdf(emp_dict)}"'
+        },
+    )
+
+
 @router.get("/{emp_id}")
 def obtener(emp_id: int, user=Depends(get_current_user)):
     conn = database.get_connection()

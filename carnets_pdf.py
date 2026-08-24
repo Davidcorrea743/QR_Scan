@@ -76,3 +76,48 @@ def generar_zip_carnets(empleados, base_url) -> bytes:
         return buffer.getvalue()
 
     return asyncio.run(_trabajo())
+
+
+def generar_pdf_carnet(emp, base_url) -> bytes:
+    """Genera un PDF de 2 páginas (frontal + trasero) para un solo empleado.
+
+    Navega a /carnet/{id} y /carnet/{id}/trasero con Chromium headless,
+    y une ambas caras en un solo PDF con pypdf.
+    """
+    from pypdf import PdfWriter
+    from playwright.async_api import async_playwright
+
+    async def _trabajo():
+        async with async_playwright() as p:
+            browser = await p.chromium.launch()
+            try:
+                pagina = await browser.new_page()
+                try:
+                    base = base_url.rstrip("/")
+                    caras = (
+                        f"/carnet/{emp['id']}",
+                        f"/carnet/{emp['id']}/trasero",
+                    )
+                    pdfs = []
+                    for ruta in caras:
+                        await pagina.goto(
+                            base + ruta, wait_until="load", timeout=60000
+                        )
+                        pdfs.append(
+                            await pagina.pdf(
+                                prefer_css_page_size=True,
+                                print_background=True,
+                            )
+                        )
+                finally:
+                    await pagina.close()
+            finally:
+                await browser.close()
+        escritor = PdfWriter()
+        for datos in pdfs:
+            escritor.append(io.BytesIO(datos))
+        salida = io.BytesIO()
+        escritor.write(salida)
+        return salida.getvalue()
+
+    return asyncio.run(_trabajo())

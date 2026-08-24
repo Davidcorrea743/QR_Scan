@@ -13,7 +13,7 @@
   <div class="barra">
     <button class="btn-volver" onclick="location.href='/admin'">← Volver al panel</button>
     <button class="btn-volver" onclick="location.href='/carnet/{{EMP_ID}}'">Frente</button>
-    <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>
+    <button class="btn-imprimir" onclick="descargarPDF()">🖨 Imprimir</button>
   </div>
 
   <div class="escala">
@@ -25,5 +25,34 @@
       </div>
     </div>
   </div>
+
+  <script>
+    function descargarPDF() {
+      var btn = document.querySelector(".btn-imprimir");
+      var texto = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Generando PDF…";
+      fetch("/api/empleados/{{EMP_ID}}/carnet-pdf")
+        .then(function (r) {
+          if (!r.ok) return r.json().then(function (d) { throw new Error(d.detail || "Error al generar"); });
+          return r.blob();
+        })
+        .then(function (blob) {
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement("a");
+          a.href = url;
+          a.download = "{{EMP_APELLIDO}}_{{EMP_NOMBRE}}_{{EMP_CEDULA}}.pdf";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        })
+        .catch(function (err) { alert("Error: " + err.message); })
+        .finally(function () {
+          btn.disabled = false;
+          btn.textContent = texto;
+        });
+    }
+  </script>
 </body>
 </html>

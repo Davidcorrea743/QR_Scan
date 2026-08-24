@@ -229,6 +229,9 @@ async def carnet_trasero_page(emp_id: int, request: Request):
             TRASERA_MENSAJE_HTML=trasera_mensaje_html,
             TRASERA_CONTACTO_HTML=trasera_contacto_html,
             EMP_ID=emp["id"],
+            EMP_NOMBRE=emp["nombre"],
+            EMP_APELLIDO=emp["apellido"],
+            EMP_CEDULA=emp["cedula"] or "",
         )
     )
 @router.get("/vcard/{emp_id}", include_in_schema=False)
