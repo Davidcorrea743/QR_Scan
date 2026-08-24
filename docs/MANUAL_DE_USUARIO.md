@@ -196,7 +196,7 @@ Formatos permitidos: **.jpg, .jpeg, .png, .webp**.
 
 ## 7. Descarga masiva de carnets (PDF)
 
-Si necesitas los carnets **frontales** de todos los empleados (por ejemplo para imprimirlos), el sistema genera un **ZIP con un PDF por empleado**, listos para imprimir. La parte trasera no se descarga porque no cambia por empleado.
+Si necesitas los carnets de todos los empleados (por ejemplo para imprimirlos), el sistema genera un **ZIP con un PDF por empleado**, y cada PDF trae **las dos caras**: página 1 el frente, página 2 el reverso.
 
 1. En el panel, pulsa **Descargar carnets** (visible solo para administradores).
 
@@ -207,22 +207,19 @@ Si necesitas los carnets **frontales** de todos los empleados (por ejemplo para 
 4. Descomprímelo: dentro hay **un PDF por empleado**, con el nombre `Apellido_Nombre_Cedula.pdf` (ej. `Pérez_Juan_12345678.pdf`).
 
 > ℹ️ Solo se incluyen los empleados **activos** (los que aparecen en la lista sin estar desactivados).
-> 💡 Cada PDF tiene el tamaño exacto del carnet (55 × 85 mm), igual que el botón **Imprimir** de cada carnet.
+> 💡 Cada página tiene el tamaño exacto del carnet (55 × 85 mm), igual que el botón **Imprimir** de cada carnet.
 
 ---
 
 ## 8. Reglas automáticas del sistema
 
-Para que los carnets se vean limpios y uniformes, el sistema **normaliza** los datos sin que hagas nada:
-
 | Campo | Qué hace el sistema |
 |---|---|
-| **Nombre y apellido** | Convierte a mayúscula inicial: `pEpITO PEREZ` → `Pepito Perez` |
-| **Cargo** | Igual: `desaRROLLAdoR` → `Desarrollador` |
+| **Nombre, apellido y cargo** | Los guarda **exactamente como los escribes** (mayúsculas, minúsculas y tildes se respetan; solo quita espacios de más) |
 | **Correo** | Lo guarda en minúsculas: `ANA@Empresa.com` → `ana@empresa.com` |
 | **Cédula y teléfono** | Los deja tal como los escribiste (solo quita espacios de más) |
 
-> ✅ Esto también se aplica a los empleados que ya estaban registrados antes.
+> ✅ Escribe los datos tal como quieres que aparezcan en el carnet (ej. `Maria Da Silva` o `Castillo de Perez`).
 
 ---
 
@@ -238,7 +235,7 @@ Sí. Deja la columna `foto` vacía o no adjuntes el ZIP. El carnet usará una im
 Solo se salta esa fila y se reporta en el resumen con su número de fila y el motivo. El resto se carga normal.
 
 **¿Los datos en mayúsculas se ven mal en el carnet?**
-No. El sistema normaliza nombre, apellido y cargo automáticamente.
+El sistema los guarda tal como los escribes. Revísalos antes de guardar: lo que veas en el formulario es lo que aparecerá en el carnet.
 
 **¿Puede un editor hacer cargas masivas?**
 No. Solo el administrador. El editor solo actualiza teléfono y correo.

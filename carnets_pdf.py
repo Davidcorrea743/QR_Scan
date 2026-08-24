@@ -19,11 +19,13 @@ def nombre_archivo_pdf(emp) -> str:
 
 
 def generar_zip_carnets(empleados, base_url) -> bytes:
-    """Genera un ZIP en memoria con un PDF (carnet frontal) por empleado activo.
+    """Genera un ZIP en memoria con un PDF de 2 páginas por empleado activo.
 
-    Usa Chromium headless (Playwright) navegando a la misma página /carnet/{id}
-    que imprime el botón 'Imprimir', con paralelismo para acelerar.
+    Usa Chromium headless (Playwright) navegando a /carnet/{id} (frontal) y
+    /carnet/{id}/trasero (reverso), y une ambas caras en un solo PDF con
+    pypdf. Paralelismo para acelerar.
     """
+    from pypdf import PdfWriter
     from playwright.async_api import async_playwright
 
     async def _trabajo():
@@ -39,19 +41,34 @@ def generar_zip_carnets(empleados, base_url) -> bytes:
                         async with semaforo:
                             pagina = await browser.new_page()
                             try:
-                                url = f"{base_url.rstrip('/')}/carnet/{emp['id']}"
-                                await pagina.goto(url, wait_until="load", timeout=60000)
-                                pdf = await pagina.pdf(
-                                    prefer_css_page_size=True,
-                                    print_background=True,
+                                base = base_url.rstrip("/")
+                                caras = (
+                                    f"/carnet/{emp['id']}",
+                                    f"/carnet/{emp['id']}/trasero",
                                 )
+                                pdfs = []
+                                for ruta in caras:
+                                    await pagina.goto(
+                                        base + ruta, wait_until="load", timeout=60000
+                                    )
+                                    pdfs.append(
+                                        await pagina.pdf(
+                                            prefer_css_page_size=True,
+                                            print_background=True,
+                                        )
+                                    )
                             finally:
                                 await pagina.close()
+                        escritor = PdfWriter()
+                        for datos in pdfs:
+                            escritor.append(io.BytesIO(datos))
+                        salida = io.BytesIO()
+                        escritor.write(salida)
                         nombre = nombre_archivo_pdf(emp)
                         if nombre in usados:
                             nombre = f"{nombre[:-4]}_{emp['id']}.pdf"
                         usados.add(nombre)
-                        zf.writestr(nombre, pdf)
+                        zf.writestr(nombre, salida.getvalue())
 
                     await asyncio.gather(*(procesar(e) for e in empleados))
                 finally:
