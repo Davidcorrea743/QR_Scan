@@ -127,7 +127,7 @@
     setLogo("logoHero");
 
     if (telefono) {
-      var num = telefono.replace(/[^0-9]/g, "");
+      var num = telefono.replace(/[^0-9]/g, "").replace(/^0/, "58");
       document.getElementById("btnWhatsapp").href = "https://wa.me/" + num;
       document.getElementById("redWhatsapp").href = "https://wa.me/" + num;
       document.getElementById("redWhatsapp").classList.remove("oculto");
