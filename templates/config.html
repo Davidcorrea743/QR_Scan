@@ -14,7 +14,7 @@
     </div>
     <div class="usuario">
       <span id="nombreUsuario"></span>
-      <span class="rol-badge">admin</span>
+      <span class="rol-badge" id="rolBadge"></span>
       <button class="btn btn-borde" onclick="location.href='/admin'">← Volver al panel</button>
       <button class="btn btn-rojo" onclick="logout()">Salir</button>
     </div>
@@ -24,6 +24,10 @@
     <div class="tarjeta tarjeta-centrada">
       <h2>Datos de la empresa</h2>
       <p class="txtmuted-sm">Estos datos se muestran en el carnet y en la página que ven quienes escanean el QR.</p>
+      <div class="mb16 oculto" id="selEmpresaWrap">
+        <label>Empresa a configurar</label>
+        <select id="selEmpresa" onchange="cambiarEmpresaConfig(this.value)"></select>
+      </div>
       <div id="mensaje" class="aviso oculto"></div>
 
       <div class="form-grid">
@@ -129,8 +133,23 @@
     if (!esAdmin()) { window.location.href = "/admin"; }
 
     document.getElementById("nombreUsuario").textContent = getUsername();
+    document.getElementById("rolBadge").textContent = getRol();
 
+    var empresaConfig = "";
     var redesGuardadas = [];
+
+    function sufijoEmp() {
+      return empresaConfig ? "?empresa_id=" + empresaConfig : "";
+    }
+
+    function ponerEmpresaFd(fd) {
+      if (empresaConfig) fd.append("empresa_id", empresaConfig);
+    }
+
+    function cambiarEmpresaConfig(v) {
+      empresaConfig = v || "";
+      cargar();
+    }
 
     var CAMPOS = {
       titulo: { input: "titulo", preview: "previewTitulo" },
@@ -151,7 +170,7 @@
     }
 
     function eliminarImagen(campo) {
-      api("/api/empresa/imagen/" + campo, { method: "DELETE" }).then(function () {
+      api("/api/empresa/imagen/" + campo + sufijoEmp(), { method: "DELETE" }).then(function () {
         var img = document.getElementById(CAMPOS[campo].preview);
         img.removeAttribute("src");
         document.getElementById(CAMPOS[campo].input).value = "";
@@ -206,7 +225,10 @@
     }
 
     function cargar() {
-      api("/api/empresa").then(function (data) {
+      api("/api/empresa" + sufijoEmp()).then(function (data) {
+        if (esSuperAdmin() && data.id && !empresaConfig) {
+          document.getElementById("selEmpresa").value = String(data.id);
+        }
         document.getElementById("nombre").value = data.nombre || "";
         document.getElementById("ubicacion").value = data.ubicacion || "";
         document.getElementById("traseraMensaje").value = data.trasera_mensaje || "";
@@ -270,7 +292,7 @@
     }
 
     function eliminarGaleria(nombre) {
-      api("/api/empresa/galeria/" + encodeURIComponent(nombre), { method: "DELETE" }).then(function () {
+      api("/api/empresa/galeria/" + encodeURIComponent(nombre) + sufijoEmp(), { method: "DELETE" }).then(function () {
         cargarGaleria();
       }).catch(function (err) {
         var msg = document.getElementById("mensaje");
@@ -281,7 +303,7 @@
     }
 
     function cargarGaleria() {
-      api("/api/empresa").then(function (data) {
+      api("/api/empresa" + sufijoEmp()).then(function (data) {
         renderGaleria(Array.isArray(data.galeria) ? data.galeria : []);
       }).catch(function () {});
     }
@@ -291,6 +313,7 @@
       if (!archivos.length) return;
       var fd = new FormData();
       archivos.forEach(function (f) { fd.append("galeria", f); });
+      ponerEmpresaFd(fd);
       api("/api/empresa", { method: "PUT", body: fd }).then(function () {
         this.value = "";
         cargarGaleria();
@@ -324,6 +347,7 @@
       if (traseraLogo) fd.append("trasera_logo", traseraLogo);
       if (traseraFondo) fd.append("trasera_fondo", traseraFondo);
 
+      ponerEmpresaFd(fd);
       api("/api/empresa", { method: "PUT", body: fd }).then(function () {
         var msg = document.getElementById("mensaje");
         msg.textContent = "Configuración guardada correctamente.";
@@ -337,7 +361,17 @@
       });
     }
 
-    cargar();
+    if (esSuperAdmin()) {
+      document.getElementById("selEmpresaWrap").classList.remove("oculto");
+      api("/api/empresas").then(function (data) {
+        document.getElementById("selEmpresa").innerHTML =
+          (data.empresas || []).map(function (e) {
+            return '<option value="' + e.id + '">' + esc(e.nombre) + "</option>";
+          }).join("");
+      }).catch(function () {}).finally(function () { cargar(); });
+    } else {
+      cargar();
+    }
   </script>
 </body>
 </html>

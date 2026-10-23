@@ -2,7 +2,7 @@ def test_login_admin_inicial(client):
     res = client.post("/api/login", json={"username": "admin", "password": "admin123"})
     assert res.status_code == 200
     data = res.json()
-    assert data["rol"] == "admin"
+    assert data["rol"] == "super_admin"
     assert data["debe_cambiar_password"] == 1
     assert data["access_token"]
 
@@ -104,3 +104,27 @@ def test_listar_usuarios(client, auth_headers):
     res = client.get("/api/usuarios", headers=auth_headers)
     assert res.status_code == 200
     assert res.json()["usuarios"][0]["username"] == "admin"
+
+
+def test_listar_usuarios_paginacion(client, auth_headers):
+    client.post(
+        "/api/usuarios",
+        json={"username": "u1", "password": "clave123", "rol": "editor"},
+        headers=auth_headers,
+    )
+    client.post(
+        "/api/usuarios",
+        json={"username": "u2", "password": "clave123", "rol": "editor"},
+        headers=auth_headers,
+    )
+    r = client.get("/api/usuarios", params={"page": 1, "limit": 2}, headers=auth_headers)
+    data = r.json()
+    assert data["total"] == 3  # admin + u1 + u2
+    assert len(data["usuarios"]) == 2
+    assert data["pages"] == 2
+
+    r = client.get("/api/usuarios", params={"page": 2, "limit": 2}, headers=auth_headers)
+    data = r.json()
+    assert data["total"] == 3
+    assert len(data["usuarios"]) == 1
+    assert data["page"] == 2

@@ -1,88 +1,54 @@
+import database
+
+
+def _contar_scans():
+    conn = database.get_connection()
+    try:
+        return conn.execute("SELECT COUNT(*) AS c FROM scans").fetchone()["c"]
+    finally:
+        conn.close()
+
+
 def test_scan_registra_escaneo(client):
+    antes = _contar_scans()
     r = client.get("/scan")
     assert r.status_code == 200
     data = r.json()
     assert "mensaje" in data
-
-    registros = client.get("/registros").json()
-    assert registros["total"] == 5
+    assert _contar_scans() == antes + 1
 
 
-def test_registros_vacio(empty_client):
-    r = empty_client.get("/registros")
+def test_scan_registra_timestamp_local(client):
+    from datetime import datetime
+
+    r = client.get("/scan")
     assert r.status_code == 200
-    data = r.json()
-    assert data["total"] == 0
-    assert data["registros"] == []
+
+    conn = database.get_connection()
+    try:
+        row = conn.execute(
+            "SELECT fecha, hora, timestamp, hour FROM scans ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+    finally:
+        conn.close()
+
+    # timestamp en hora local: coincide con fecha/hora de la misma fila...
+    assert row["timestamp"][:10] == row["fecha"]
+    assert int(row["timestamp"][11:13]) == row["hour"]
+    # ...y cercano a la hora local actual (no desplazado por el huso UTC)
+    ts = datetime.strptime(row["timestamp"], "%Y-%m-%d %H:%M:%S")
+    assert abs((datetime.now() - ts).total_seconds()) < 60
 
 
-def test_registros_filtro_fecha(client):
-    r = client.get("/registros", params={"fecha": "2024-01-15"})
-    data = r.json()
-    assert data["total"] == 1
-    assert data["registros"][0]["fecha"] == "2024-01-15"
+def test_registros_y_estadisticas_eliminados_de_8000(client):
+    # Estas rutas se movieron al dashboard del puerto 8001; en 8000 ya no existen.
+    assert client.get("/registros").status_code == 404
+    assert client.get("/estadisticas/resumen").status_code == 404
+    assert client.get("/estadisticas/por-dia").status_code == 404
 
 
-def test_registros_filtro_mes(client):
-    r = client.get("/registros", params={"mes": 1})
-    data = r.json()
-    assert data["total"] == 2
-
-
-def test_registros_filtro_anio(client):
-    r = client.get("/registros", params={"año": 2023})
-    data = r.json()
-    assert data["total"] == 1
-
-
-def test_registros_filtro_rango_horas(client):
-    r = client.get("/registros", params={"hora_inicio": 12, "hora_fin": 14})
-    data = r.json()
-    assert data["total"] == 1
-    assert data["registros"][0]["hour"] == 14
-
-
-def test_registros_filtros_combinados(client):
-    r = client.get("/registros", params={"mes": 1, "hora_inicio": 9, "hora_fin": 18})
-    data = r.json()
-    assert data["total"] == 2
-
-
-def test_registros_limit(client):
-    r = client.get("/registros", params={"limit": 2})
-    assert len(r.json()["registros"]) == 2
-
-
-def test_estadisticas_por_dia(client):
-    r = client.get("/estadisticas/por-dia")
-    assert r.status_code == 200
-    data = r.json()
-    assert data["total_dias"] == 4
-    assert all(d["total_escaneos"] == 1 for d in data["estadisticas_por_dia"])
-
-
-def test_estadisticas_por_mes(client):
-    r = client.get("/estadisticas/por-mes")
-    data = r.json()
-    total = sum(m["total_escaneos"] for m in data["estadisticas_por_mes"])
-    assert total == 4
-
-
-def test_estadisticas_por_hora(client):
-    r = client.get("/estadisticas/por-hora")
-    data = r.json()
-    assert data["total_horas_con_actividad"] == 4
-
-
-def test_estadisticas_por_anio(client):
-    r = client.get("/estadisticas/por-año")
-    data = r.json()
-    assert data["total_años"] == 3
-
-
-def test_estadisticas_resumen(client):
-    r = client.get("/estadisticas/resumen")
-    data = r.json()["resumen"]
-    assert data["total_escaneos"] == 4
-    assert data["escaneos_hoy"] == 1
-    assert data["escaneos_este_mes"] == 1
+def test_scan_rate_limit(client):
+    # Límite por defecto: 30/min por IP. La 31ª petición debe ser 429.
+    for _ in range(30):
+        assert client.get("/scan").status_code == 200
+    assert client.get("/scan").status_code == 429

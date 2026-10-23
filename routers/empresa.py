@@ -5,16 +5,26 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 import database
 import media
-from auth import require_admin
+from auth import empresa_escrita, require_admin
 
 router = APIRouter(prefix="/empresa", tags=["empresa"])
 
+CAMPOS_IMAGEN = {
+    "titulo", "logo", "fondo", "carnet_fondo", "trasera_fondo", "trasera_logo",
+}
+
+
+def _destino(user, empresa_id=None) -> int:
+    """Empresa que administra esta petición (admin: la suya; super: ?empresa_id=)."""
+    return empresa_escrita(user, empresa_id)
+
 
 @router.get("")
-def obtener(user=Depends(require_admin)):
+def obtener(empresa_id: int = None, user=Depends(require_admin)):
+    objetivo = _destino(user, empresa_id)
     conn = database.get_connection()
     try:
-        row = conn.execute("SELECT * FROM empresa WHERE id = 1").fetchone()
+        row = conn.execute("SELECT * FROM empresa WHERE id = ?", (objetivo,)).fetchone()
     finally:
         conn.close()
     if not row:
@@ -28,16 +38,16 @@ def obtener(user=Depends(require_admin)):
 
 
 @router.delete("/imagen/{campo}")
-def eliminar_imagen(campo: str, user=Depends(require_admin)):
-    CAMPOS_VALIDOS = {"titulo", "logo", "fondo", "carnet_fondo", "trasera_fondo", "trasera_logo"}
-    if campo not in CAMPOS_VALIDOS:
+def eliminar_imagen(campo: str, empresa_id: int = None, user=Depends(require_admin)):
+    if campo not in CAMPOS_IMAGEN:
         raise HTTPException(status_code=400, detail="Campo de imagen no válido")
+    objetivo = _destino(user, empresa_id)
     conn = database.get_connection()
     try:
-        existing = conn.execute("SELECT * FROM empresa WHERE id = 1").fetchone()
+        existing = conn.execute("SELECT * FROM empresa WHERE id = ?", (objetivo,)).fetchone()
         if existing and existing[campo]:
             media.eliminar_archivo(existing[campo])
-            conn.execute(f"UPDATE empresa SET {campo} = NULL WHERE id = 1")
+            conn.execute(f"UPDATE empresa SET {campo} = NULL WHERE id = ?", (objetivo,))
             conn.commit()
     finally:
         conn.close()
@@ -45,10 +55,13 @@ def eliminar_imagen(campo: str, user=Depends(require_admin)):
 
 
 @router.delete("/galeria/{nombre}")
-def eliminar_imagen_galeria(nombre: str, user=Depends(require_admin)):
+def eliminar_imagen_galeria(
+    nombre: str, empresa_id: int = None, user=Depends(require_admin)
+):
+    objetivo = _destino(user, empresa_id)
     conn = database.get_connection()
     try:
-        existing = conn.execute("SELECT * FROM empresa WHERE id = 1").fetchone()
+        existing = conn.execute("SELECT * FROM empresa WHERE id = ?", (objetivo,)).fetchone()
         if not existing or not existing["galeria"]:
             return {"ok": True}
         try:
@@ -59,8 +72,8 @@ def eliminar_imagen_galeria(nombre: str, user=Depends(require_admin)):
             galeria.remove(nombre)
             media.eliminar_archivo(nombre)
             conn.execute(
-                "UPDATE empresa SET galeria = ? WHERE id = 1",
-                (json.dumps(galeria) if galeria else None,),
+                "UPDATE empresa SET galeria = ? WHERE id = ?",
+                (json.dumps(galeria) if galeria else None, objetivo),
             )
             conn.commit()
     finally:
@@ -84,12 +97,17 @@ def actualizar(
     trasera_telefono: str = Form(None),
     trasera_rif: str = Form(None),
     galeria: List[UploadFile] = File(None),
+    empresa_id: int = Form(None),
     user=Depends(require_admin),
 ):
+    objetivo = _destino(user, empresa_id)
     conn = database.get_connection()
     try:
-        existing = conn.execute("SELECT * FROM empresa WHERE id = 1").fetchone()
+        existing = conn.execute("SELECT * FROM empresa WHERE id = ?", (objetivo,)).fetchone()
         valores = {}
+        nuevo_logo = nuevo_fondo = nuevo_carnet_fondo = nuevo_titulo = None
+        nuevo_trasera_fondo = nuevo_trasera_logo = None
+
         if nombre is not None:
             valores["nombre"] = nombre.strip()
         if redes is not None:
@@ -145,12 +163,12 @@ def actualizar(
 
         if existing:
             sets = ", ".join(f"{k} = ?" for k in valores)
-            conn.execute(f"UPDATE empresa SET {sets} WHERE id = 1", (*valores.values(),))
+            conn.execute(f"UPDATE empresa SET {sets} WHERE id = ?", (*valores.values(), objetivo))
         else:
             cols = ", ".join(valores)
             placeholders = ", ".join("?" for _ in valores)
             conn.execute(
-                f"INSERT INTO empresa (id, {cols}) VALUES (1, {placeholders})",
+                f"INSERT INTO empresa (id, {cols}) VALUES ({objetivo}, {placeholders})",
                 (*valores.values(),),
             )
         conn.commit()
@@ -169,4 +187,4 @@ def actualizar(
             media.eliminar_archivo(existing["trasera_logo"])
     finally:
         conn.close()
-    return {"ok": True}
+    return {"ok": True, "empresa_id": objetivo}

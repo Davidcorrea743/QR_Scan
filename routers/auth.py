@@ -2,7 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 import database
-from auth import create_token, get_current_user, hash_password, verify_password
+import rate_limit
+from auth import (
+    create_token,
+    get_current_user,
+    hash_password,
+    validar_password_nueva,
+    verify_password,
+)
 
 router = APIRouter(tags=["auth"])
 
@@ -17,7 +24,7 @@ class ChangePasswordRequest(BaseModel):
     password_nueva: str
 
 
-@router.post("/login")
+@router.post("/login", dependencies=[Depends(rate_limit.limitar_login)])
 def login(body: LoginRequest):
     conn = database.get_connection()
     try:
@@ -51,6 +58,7 @@ def me(user=Depends(get_current_user)):
 
 @router.post("/password")
 def cambiar_password(body: ChangePasswordRequest, user=Depends(get_current_user)):
+    validar_password_nueva(body.password_nueva)
     conn = database.get_connection()
     try:
         current = conn.execute(

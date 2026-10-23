@@ -57,8 +57,9 @@ def _mensaje_con_lineas(mensaje: str) -> str:
     return "<br>".join(escape(line) for line in mensaje.split("\n"))
 
 
-def _empresa_data(conn):
-    row = conn.execute("SELECT * FROM empresa WHERE id = 1").fetchone()
+def _empresa_data(conn, empresa_id: int = 1):
+    """Config de empresa para páginas públicas (carnet/perfil/vcard del empleado)."""
+    row = conn.execute("SELECT * FROM empresa WHERE id = ?", (empresa_id,)).fetchone()
     data = dict(row) if row else {}
     try:
         redes = json.loads(data.get("redes") or "[]")
@@ -105,11 +106,11 @@ async def carnet_page(emp_id: int, request: Request):
         emp = conn.execute(
             "SELECT * FROM empleados WHERE id = ?", (emp_id,)
         ).fetchone()
-        empresa = _empresa_data(conn)
+        if not emp:
+            raise HTTPException(status_code=404, detail="Empleado no encontrado")
+        empresa = _empresa_data(conn, emp["empresa_id"])
     finally:
         conn.close()
-    if not emp:
-        raise HTTPException(status_code=404, detail="Empleado no encontrado")
 
     base_url = _base_url(request)
     marco_izquierdo = empresa.get("fondo", "") or ""
@@ -163,11 +164,11 @@ async def carnet_trasero_page(emp_id: int, request: Request):
         emp = conn.execute(
             "SELECT * FROM empleados WHERE id = ?", (emp_id,)
         ).fetchone()
-        empresa = _empresa_data(conn)
+        if not emp:
+            raise HTTPException(status_code=404, detail="Empleado no encontrado")
+        empresa = _empresa_data(conn, emp["empresa_id"])
     finally:
         conn.close()
-    if not emp:
-        raise HTTPException(status_code=404, detail="Empleado no encontrado")
 
     trasera_fondo = empresa.get("trasera_fondo", "") or ""
     trasera_fondo_css = (
@@ -241,7 +242,11 @@ async def vcard_trabajador(emp_id: int):
         emp = conn.execute(
             "SELECT * FROM empleados WHERE id = ? AND activo = 1", (emp_id,)
         ).fetchone()
-        empresa = conn.execute("SELECT * FROM empresa WHERE id = 1").fetchone()
+        empresa = (
+            conn.execute("SELECT * FROM empresa WHERE id = ?", (emp["empresa_id"],)).fetchone()
+            if emp
+            else None
+        )
     finally:
         conn.close()
     if not emp:
@@ -304,11 +309,11 @@ async def perfil_publico(emp_id: int, request: Request):
         emp = conn.execute(
             "SELECT * FROM empleados WHERE id = ? AND activo = 1", (emp_id,)
         ).fetchone()
-        empresa = _empresa_data(conn)
+        if not emp:
+            raise HTTPException(status_code=404, detail="Trabajador no encontrado")
+        empresa = _empresa_data(conn, emp["empresa_id"])
     finally:
         conn.close()
-    if not emp:
-        raise HTTPException(status_code=404, detail="Trabajador no encontrado")
 
     logo = empresa.get("titulo") or empresa.get("logo", "")
     ubicacion = empresa.get("ubicacion", "")

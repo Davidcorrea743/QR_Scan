@@ -2,7 +2,8 @@ import os
 import sqlite3
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOADS_DIR = os.path.join(BASE_DIR, "uploads")
+# QR_UPLOADS_DIR permite apuntar a otra carpeta (tests la aíslan en un tmp).
+UPLOADS_DIR = os.environ.get("QR_UPLOADS_DIR", os.path.join(BASE_DIR, "uploads"))
 DB_PATH = os.environ.get("QR_DB_PATH", os.path.join(BASE_DIR, "qr_tracker.db"))
 
 os.makedirs(UPLOADS_DIR, exist_ok=True)
@@ -79,31 +80,110 @@ def init_database():
     conn.close()
 
 
-def _migrar_columnas(conn):
-    """Agrega columnas nuevas a tablas existentes (migración simple)."""
+def _agregar_columna(conn, tabla: str, columna: str, definicion: str):
+    """ALTER TABLE ADD COLUMN idempotente (solo si la columna no existe)."""
     cur = conn.cursor()
-    columnas = [row["name"] for row in cur.execute("PRAGMA table_info(empresa)").fetchall()]
-    if "carnet_fondo" not in columnas:
-        cur.execute("ALTER TABLE empresa ADD COLUMN carnet_fondo TEXT")
+    existentes = [row["name"] for row in cur.execute(f"PRAGMA table_info({tabla})")]
+    if columna not in existentes:
+        cur.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna} {definicion}")
         conn.commit()
-    columnas = [row["name"] for row in cur.execute("PRAGMA table_info(empresa)").fetchall()]
-    if "titulo" not in columnas:
-        cur.execute("ALTER TABLE empresa ADD COLUMN titulo TEXT")
-        conn.commit()
-    columnas = [row["name"] for row in cur.execute("PRAGMA table_info(empresa)").fetchall()]
-    if "ubicacion" not in columnas:
-        cur.execute("ALTER TABLE empresa ADD COLUMN ubicacion TEXT")
-        conn.commit()
-    columnas = [row["name"] for row in cur.execute("PRAGMA table_info(empresa)").fetchall()]
-    if "galeria" not in columnas:
-        cur.execute("ALTER TABLE empresa ADD COLUMN galeria TEXT")
-        conn.commit()
-    for columna in ("trasera_fondo", "trasera_logo", "trasera_mensaje", "trasera_correo", "trasera_telefono", "trasera_rif"):
-        columnas = [row["name"] for row in cur.execute("PRAGMA table_info(empresa)").fetchall()]
+    cur.close()
+
+
+def _empresa_multifila(conn):
+    """Quita el CHECK (id = 1) de la tabla empresa para permitir varias filas.
+
+    SQLite no permite eliminar un CHECK con ALTER: se recrea la tabla
+    conservando datos y columnas. Idempotente: solo actúa si el CHECK existe.
+    """
+    cur = conn.cursor()
+    fila = cur.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'empresa'"
+    ).fetchone()
+    sql = fila[0] if fila else None
+    if not sql or "check" not in sql.lower():
+        cur.close()
+        return
+
+    columnas = [
+        (row["name"], row["type"] or "TEXT")
+        for row in cur.execute("PRAGMA table_info(empresa)")
+    ]
+    tipos_validos = {"TEXT", "INTEGER", "REAL", "BLOB", "NUMERIC"}
+    definiciones = []
+    for nombre, tipo in columnas:
+        if nombre == "id":
+            definiciones.append("id INTEGER PRIMARY KEY")
+        else:
+            tipo_sql = tipo.upper() if tipo.upper() in tipos_validos else "TEXT"
+            definiciones.append(f"{nombre} {tipo_sql}")
+    nombres = ", ".join(n for n, _ in columnas)
+    cur.executescript(
+        f"""
+        CREATE TABLE empresa_tmp ({", ".join(definiciones)});
+        INSERT INTO empresa_tmp ({nombres}) SELECT {nombres} FROM empresa;
+        DROP TABLE empresa;
+        ALTER TABLE empresa_tmp RENAME TO empresa;
+        """
+    )
+    conn.commit()
+    cur.close()
+
+
+def _migrar_columnas(conn):
+    """Migración de esquema multi-empresa (idempotente): en cada arranque."""
+    cur = conn.cursor()
+    # 1) columnas de la configuración de empresa (previas a reconstruir la tabla)
+    for columna in ("carnet_fondo", "titulo", "ubicacion", "galeria"):
+        columnas = [row["name"] for row in cur.execute("PRAGMA table_info(empresa)")]
+        if columna not in columnas:
+            cur.execute(f"ALTER TABLE empresa ADD COLUMN {columna} TEXT")
+            conn.commit()
+    for columna in (
+        "trasera_fondo", "trasera_logo", "trasera_mensaje",
+        "trasera_correo", "trasera_telefono", "trasera_rif",
+    ):
+        columnas = [row["name"] for row in cur.execute("PRAGMA table_info(empresa)")]
         if columna not in columnas:
             cur.execute(f"ALTER TABLE empresa ADD COLUMN {columna} TEXT")
             conn.commit()
     cur.close()
+
+    # 2) empresa con varias filas (elimina CHECK id = 1)
+    _empresa_multifila(conn)
+
+    # empresa por defecto para bases de datos nuevas o vacías
+    conn.execute(
+        "INSERT OR IGNORE INTO empresa (id, nombre) VALUES (1, 'Empresa 1')"
+    )
+    conn.commit()
+
+    # 3) pertenencia a empresa en empleados, usuarios y scans (+ A3: empleado)
+    #    Nota: SQLite prohíbe REFERENCES con default NO-NULL en ADD COLUMN, así
+    #    que empresa_id se controla con índices + validación en la API; la FK de
+    #    empleado_id sí es posible porque su default es NULL.
+    _agregar_columna(conn, "empleados", "empresa_id", "INTEGER NOT NULL DEFAULT 1")
+    _agregar_columna(conn, "usuarios", "empresa_id", "INTEGER NOT NULL DEFAULT 1")
+    _agregar_columna(conn, "scans", "empresa_id", "INTEGER NOT NULL DEFAULT 1")
+    _agregar_columna(conn, "scans", "empleado_id", "INTEGER REFERENCES empleados(id)")
+
+    # 4) índices de consulta
+    conn.executescript(
+        """
+        CREATE INDEX IF NOT EXISTS idx_empleados_empresa ON empleados(empresa_id);
+        CREATE INDEX IF NOT EXISTS idx_usuarios_empresa ON usuarios(empresa_id);
+        CREATE INDEX IF NOT EXISTS idx_scans_empresa ON scans(empresa_id);
+        CREATE INDEX IF NOT EXISTS idx_scans_empleado ON scans(empleado_id);
+        """
+    )
+
+    # 5) migración de roles: si aún no hay super_admin, los admin pasan a
+    #    super_admin (una sola vez; los admin creados después se conservan)
+    conn.execute(
+        "UPDATE usuarios SET rol = 'super_admin' WHERE rol = 'admin' "
+        "AND NOT EXISTS (SELECT 1 FROM usuarios WHERE rol = 'super_admin')"
+    )
+    conn.commit()
 
 
 def _normalizar_datos(conn):
@@ -143,7 +223,7 @@ def _seed_admin(conn):
         cur.execute(
             "INSERT INTO usuarios (username, password_hash, rol, debe_cambiar_password, activo) "
             "VALUES (?, ?, ?, ?, 1)",
-            ("admin", hash_password("admin123"), "admin", 1),
+            ("admin", hash_password("admin123"), "super_admin", 1),
         )
         conn.commit()
         print("✅ Usuario admin creado: admin / admin123 (cambiar en el primer acceso)")

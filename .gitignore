@@ -4,4 +4,5 @@ __pycache__/
 uploads/*
 !uploads/.gitkeep
 qr_tracker.db
+respaldos/
 .pytest_cache/

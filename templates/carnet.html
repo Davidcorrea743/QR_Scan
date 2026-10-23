@@ -78,8 +78,11 @@
       var texto = btn.textContent;
       btn.disabled = true;
       btn.textContent = "Generando PDF…";
-      fetch("/api/empleados/{{EMP_ID}}/carnet-pdf")
+      fetch("/api/empleados/{{EMP_ID}}/carnet-pdf", {
+        headers: { "Authorization": "Bearer " + (localStorage.getItem("token") || "") }
+      })
         .then(function (r) {
+          if (r.status === 401) { throw new Error("Debes iniciar sesión para descargar el PDF."); }
           if (!r.ok) return r.json().then(function (d) { throw new Error(d.detail || "Error al generar"); });
           return r.blob();
         })

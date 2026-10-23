@@ -29,8 +29,9 @@
           <p class="m0 txtmuted-sm" id="contadorEmpleados"></p>
         </div>
         <div class="flexbtn">
+          <select id="selEmpresa" class="sel-empresa oculto" onchange="cambiarEmpresa(this.value)" aria-label="Filtrar por empresa"></select>
           <label class="btn btn-borde m0">
-            <input type="checkbox" id="verInactivos" onchange="cargarEmpleados()" class="wauto"> Ver inactivos
+            <input type="checkbox" id="verInactivos" onchange="paginaEmpleados = 1; cargarEmpleados()" class="wauto"> Ver inactivos
           </label>
           <button class="btn btn-verde oculto" id="btnNuevo" onclick="location.href='/formulario'">+ Nuevo empleado</button>
           <button class="btn btn-borde oculto" id="btnCargaMasiva" onclick="abrirCargaMasiva()">Carga masiva</button>
@@ -50,6 +51,7 @@
               <th>Cargo</th>
               <th>Correo</th>
               <th>Teléfono</th>
+              <th class="col-emp">Empresa</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -58,6 +60,7 @@
           </tbody>
         </table>
       </div>
+      <div class="paginacion" id="pagEmpleados"></div>
     </div>
 
     <div class="tarjeta oculto" id="cardUsuarios">
@@ -68,13 +71,14 @@
       <div class="ovxauto mt16">
         <table class="tabla">
           <thead>
-            <tr><th>Usuario</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr>
+            <tr><th>Usuario</th><th>Rol</th><th>Estado</th><th class="col-emp">Empresa</th><th>Acciones</th></tr>
           </thead>
           <tbody id="tablaUsuarios">
             <tr><td colspan="4" class="cargando">Cargando...</td></tr>
           </tbody>
         </table>
       </div>
+      <div class="paginacion" id="pagUsuarios"></div>
     </div>
   </div>
 
@@ -84,7 +88,41 @@
   <script>
     if (!requiereLogin()) {}
 
-    var esAdmin = getRol() === "admin";
+    var esAdmin = getRol() === "admin" || getRol() === "super_admin";
+    var esSuper = esSuperAdmin();
+    var paginaEmpleados = 1;
+    var paginaUsuarios = 1;
+    var empresaSeleccionada = "";
+    var mapaEmpresas = {};
+    var LIMITE_EMPLEADOS = 10;
+    var LIMITE_USUARIOS = 10;
+    var COLS_EMP = esSuper ? 8 : 7;
+    var COLS_USU = esSuper ? 5 : 4;
+
+    function irPaginaEmpleados(p) { paginaEmpleados = p; cargarEmpleados(); }
+    function irPaginaUsuarios(p) { paginaUsuarios = p; cargarUsuarios(); }
+
+    function cambiarEmpresa(v) {
+      empresaSeleccionada = v || "";
+      paginaEmpleados = 1;
+      paginaUsuarios = 1;
+      cargarEmpleados();
+      if (esAdmin) cargarUsuarios();
+    }
+
+    function cargarEmpresas() {
+      if (!esSuper) return Promise.resolve();
+      return api("/api/empresas").then(function (data) {
+        var lista = data.empresas || [];
+        lista.forEach(function (e) { mapaEmpresas[e.id] = e.nombre; });
+        var sel = document.getElementById("selEmpresa");
+        sel.innerHTML = '<option value="">Todas las empresas</option>' + lista.map(function (e) {
+          return '<option value="' + e.id + '">' + esc(e.nombre) + "</option>";
+        }).join("");
+        sel.classList.remove("oculto");
+        document.querySelectorAll(".tabla").forEach(function (t) { t.classList.add("con-empresas"); });
+      }).catch(function () {});
+    }
 
     function abrirCargaMasiva() {
       var modal = document.getElementById("modal");
@@ -110,6 +148,7 @@
       fd.append("archivo", csv);
       var zip = document.getElementById("cm_zip").files[0];
       if (zip) fd.append("zip_fotos", zip);
+      if (esSuper && empresaSeleccionada) fd.append("empresa_id", empresaSeleccionada);
       api("/api/empleados/carga-masiva", { method: "POST", body: fd }).then(function (data) {
         var html = '<div class="aviso m0">' +
           '<p class="m0"><strong>Importados:</strong> ' + data.importados + '</p>' +
@@ -133,7 +172,9 @@
       var texto = btn.textContent;
       btn.disabled = true;
       btn.textContent = "Generando PDFs…";
-      fetch("/api/empleados/carnets/zip", { headers: { "Authorization": "Bearer " + getToken() } })
+      var urlCarnets = "/api/empleados/carnets/zip";
+      if (esSuper && empresaSeleccionada) urlCarnets += "?empresa_id=" + empresaSeleccionada;
+      fetch(urlCarnets, { headers: { "Authorization": "Bearer " + getToken() } })
         .then(function (r) {
           if (r.status === 401) { logout(); throw new Error("Sesión expirada"); }
           if (!r.ok) {
@@ -170,13 +211,22 @@
 
     function cargarEmpleados() {
       var incluir = document.getElementById("verInactivos").checked ? 1 : 0;
-      var url = "/api/empleados" + (esAdmin ? "?incluir_inactivos=" + incluir : "");
-      api(url).then(function (data) {
+      var params = "page=" + paginaEmpleados + "&limit=" + LIMITE_EMPLEADOS;
+      if (esAdmin) params += "&incluir_inactivos=" + incluir;
+      if (esSuper && empresaSeleccionada) params += "&empresa_id=" + empresaSeleccionada;
+      api("/api/empleados?" + params).then(function (data) {
         var body = document.getElementById("tablaBody");
+        // Si la página quedó vacía (p.ej. se borró el último de la página), volvemos a la 1.
+        if (!data.empleados.length && paginaEmpleados > 1) {
+          paginaEmpleados = 1;
+          cargarEmpleados();
+          return;
+        }
         document.getElementById("contadorEmpleados").textContent =
-          data.empleados.length + " empleados";
+          data.total + " empleados";
         if (!data.empleados.length) {
-          body.innerHTML = '<tr><td colspan="7" class="cargando">No hay empleados registrados.</td></tr>';
+          body.innerHTML = '<tr><td colspan="' + COLS_EMP + '" class="cargando">No hay empleados registrados.</td></tr>';
+          renderPaginacion("pagEmpleados", 1, 1, "irPaginaEmpleados");
           return;
         }
         body.innerHTML = data.empleados.map(function (e) {
@@ -188,6 +238,9 @@
             '<td>' + esc(e.cargo) + '</td>' +
             '<td>' + esc(e.correo) + '</td>' +
             '<td>' + esc(e.telefono) + '</td>' +
+            (esSuper
+              ? '<td>' + esc(mapaEmpresas[e.empresa_id] || e.empresa_id) + '</td>'
+              : '') +
             '<td><div class="acciones">' +
             '<button class="btn btn-borde" onclick="location.href=\'/formulario?id=' + e.id + '\'">Editar</button>' +
             '<button class="btn btn-borde" onclick="location.href=\'/carnet/' + e.id + '\'">Carnet</button>' +
@@ -198,6 +251,7 @@
               : '') +
             '</div></td></tr>';
         }).join("");
+        renderPaginacion("pagEmpleados", data.page, data.pages, "irPaginaEmpleados");
       }).catch(function (err) {
         mostrarError(err.message);
       });
@@ -216,18 +270,34 @@
     }
 
     function cargarUsuarios() {
-      api("/api/usuarios").then(function (data) {
+      var urlUsuarios = "/api/usuarios?page=" + paginaUsuarios + "&limit=" + LIMITE_USUARIOS;
+      if (esSuper && empresaSeleccionada) urlUsuarios += "&empresa_id=" + empresaSeleccionada;
+      api(urlUsuarios).then(function (data) {
         var body = document.getElementById("tablaUsuarios");
+        if (!data.usuarios.length && paginaUsuarios > 1) {
+          paginaUsuarios = 1;
+          cargarUsuarios();
+          return;
+        }
+        if (!data.usuarios.length) {
+          body.innerHTML = '<tr><td colspan="' + COLS_USU + '" class="cargando">No hay usuarios registrados.</td></tr>';
+          renderPaginacion("pagUsuarios", 1, 1, "irPaginaUsuarios");
+          return;
+        }
         body.innerHTML = data.usuarios.map(function (u) {
           return '<tr>' +
             '<td>' + esc(u.username) + '</td>' +
             '<td>' + esc(u.rol) + (u.debe_cambiar_password ? ' <span class="rol-badge">debe cambiar</span>' : '') + '</td>' +
             '<td>' + (u.activo ? 'Activo' : 'Inactivo') + '</td>' +
+            (esSuper
+              ? '<td>' + esc(mapaEmpresas[u.empresa_id] || u.empresa_id) + '</td>'
+              : '') +
             '<td><div class="acciones">' +
             '<button class="btn btn-borde" onclick="resetPassword(' + u.id + ')">Resetear clave</button>' +
             '<button class="btn ' + (u.activo ? 'btn-rojo' : 'btn-verde') + '" onclick="toggleUsuario(' + u.id + ',' + u.activo + ')">' + (u.activo ? 'Desactivar' : 'Activar') + '</button>' +
             '</div></td></tr>';
         }).join("");
+        renderPaginacion("pagUsuarios", data.page, data.pages, "irPaginaUsuarios");
       }).catch(function () {});
     }
 
@@ -239,9 +309,15 @@
         '<div class="tarjeta modal-panel">' +
         '<h2>Nuevo usuario</h2>' +
         '<div class="mb12"><label>Usuario</label><input id="nu_user" required></div>' +
-        '<div class="mb12"><label>Contraseña</label><input id="nu_pass" type="password" minlength="6" required></div>' +
+        '<div class="mb12"><label>Contraseña</label><input id="nu_pass" type="password" minlength="8" required></div>' +
         '<div class="mb16"><label>Rol</label>' +
         '<select id="nu_rol"><option value="editor">Editor</option><option value="admin">Administrador</option></select></div>' +
+        (esSuper
+          ? '<div class="mb16"><label>Empresa</label><select id="nu_empresa">' +
+            Object.keys(mapaEmpresas).map(function (id) {
+              return '<option value="' + id + '">' + esc(mapaEmpresas[id]) + "</option>";
+            }).join("") + "</select></div>"
+          : "") +
         '<div class="modal-actions">' +
         '<button class="btn btn-borde" onclick="document.getElementById(\'modal\').classList.add(\'oculto\')">Cancelar</button>' +
         '<button class="btn btn-primario" onclick="crearUsuario()">Crear</button>' +
@@ -253,9 +329,11 @@
       var password = document.getElementById("nu_pass").value;
       var rol = document.getElementById("nu_rol").value;
       if (!username || password.length < 6) { alert("Usuario obligatorio y contraseña de al menos 6 caracteres"); return; }
+      var nuevo = { username: username, password: password, rol: rol };
+      if (esSuper) nuevo.empresa_id = parseInt(document.getElementById("nu_empresa").value, 10);
       api("/api/usuarios", {
         method: "POST",
-        body: JSON.stringify({ username: username, password: password, rol: rol })
+        body: JSON.stringify(nuevo)
       }).then(function () {
         document.getElementById("modal").classList.add("oculto");
         cargarUsuarios();
@@ -284,8 +362,8 @@
         '<div class="tarjeta modal-panel-sm">' +
         '<h2>Cambiar contraseña</h2>' +
         '<div class="mb12"><label>Contraseña actual</label><input id="cp_actual" type="password" required></div>' +
-        '<div class="mb12"><label>Nueva contraseña</label><input id="cp_nueva" type="password" minlength="6" required></div>' +
-        '<div class="mb16"><label>Repite la nueva</label><input id="cp_nueva2" type="password" minlength="6" required></div>' +
+        '<div class="mb12"><label>Nueva contraseña</label><input id="cp_nueva" type="password" minlength="8" required></div>' +
+        '<div class="mb16"><label>Repite la nueva</label><input id="cp_nueva2" type="password" minlength="8" required></div>' +
         '<div class="modal-actions">' +
         '<button class="btn btn-borde" onclick="document.getElementById(\'modal\').classList.add(\'oculto\')">Cancelar</button>' +
         '<button class="btn btn-acento" onclick="guardarPassword()">Guardar</button>' +
@@ -314,8 +392,10 @@
     }
 
     mostrarUsuario();
-    cargarEmpleados();
-    if (esAdmin) cargarUsuarios();
+    cargarEmpresas().then(function () {
+      cargarEmpleados();
+      if (esAdmin) cargarUsuarios();
+    });
   </script>
 </body>
 </html>

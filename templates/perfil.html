@@ -147,7 +147,7 @@
       document.getElementById("btnUbicacion").classList.remove("oculto");
     }
 
-    try { fetch("{{BASE_URL}}" + "/scan", { mode: "no-cors" }); } catch (e) {}
+    try { fetch("{{BASE_URL}}" + "/scan?e={{EMP_ID}}", { mode: "no-cors" }); } catch (e) {}
 
     var luzBox = document.getElementById("luzBox");
     var luzImg = document.getElementById("luzImg");

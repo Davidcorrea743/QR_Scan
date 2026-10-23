@@ -63,9 +63,18 @@ def test_paginas_accesibles(client):
 
 
 def test_escaneo_desde_perfil(client):
-    antes = client.get("/registros").json()["total"]
+    import database
+
+    def contar():
+        conn = database.get_connection()
+        try:
+            return conn.execute("SELECT COUNT(*) AS c FROM scans").fetchone()["c"]
+        finally:
+            conn.close()
+
+    antes = contar()
     client.get("/scan")
-    despues = client.get("/registros").json()["total"]
+    despues = contar()
     assert despues == antes + 1
 
 

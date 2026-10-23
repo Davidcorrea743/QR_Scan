@@ -8,7 +8,15 @@ from fastapi.responses import StreamingResponse
 
 import database
 import media
-from auth import get_current_user, require_admin
+import rate_limit
+from auth import (
+    empresa_escrita,
+    es_admin,
+    es_super_admin,
+    exigir_en_alcance,
+    get_current_user,
+    require_admin,
+)
 from normalizar import normalizar_correo, normalizar_nombre
 
 router = APIRouter(prefix="/empleados", tags=["empleados"])
@@ -21,23 +29,69 @@ TILDES = str.maketrans(
 EXT_FOTOS = (".png", ".jpg", ".jpeg", ".webp")
 MAX_TAMANO_CSV = 5 * 1024 * 1024
 MAX_TAMANO_FOTO = 5 * 1024 * 1024
+# Límites del ZIP de fotos (QR_MAX_ZIP permite reducirlos en tests).
+MAX_TAMANO_ZIP = int(os.environ.get("QR_MAX_ZIP", str(50 * 1024 * 1024)))
+MAX_ENTRADAS_ZIP = 5000
+MAX_DESComprimido_ZIP = 200 * 1024 * 1024
+
+
+def _cedula_duplicada(conn, cedula, empresa_id, excluir_id=None) -> bool:
+    """A6: cédula única dentro de la misma empresa (ignora vacías)."""
+    if not cedula:
+        return False
+    consulta = (
+        "SELECT id FROM empleados WHERE empresa_id = ? AND LOWER(cedula) = LOWER(?)"
+    )
+    params = [empresa_id, cedula]
+    if excluir_id is not None:
+        consulta += " AND id != ?"
+        params.append(excluir_id)
+    return conn.execute(consulta, params).fetchone() is not None
 
 
 @router.get("")
-def listar(incluir_inactivos: int = 0, user=Depends(get_current_user)):
+def listar(
+    incluir_inactivos: int = 0,
+    page: int = 1,
+    limit: int = 10,
+    empresa_id: int = None,
+    user=Depends(get_current_user),
+):
+    page = max(1, page)
+    limit = max(1, min(limit, 200))
+    offset = (page - 1) * limit
     conn = database.get_connection()
     try:
-        if incluir_inactivos and user["rol"] == "admin":
-            rows = conn.execute(
-                "SELECT * FROM empleados ORDER BY nombre, apellido"
-            ).fetchall()
+        condiciones = []
+        params = []
+        puede_ver_inactivos = bool(incluir_inactivos) and es_admin(user)
+        if not puede_ver_inactivos:
+            condiciones.append("activo = 1")
+        if es_super_admin(user):
+            # super_admin: todas las empresas (o la que indique con ?empresa_id=)
+            if empresa_id is not None:
+                condiciones.append("empresa_id = ?")
+                params.append(empresa_id)
         else:
-            rows = conn.execute(
-                "SELECT * FROM empleados WHERE activo = 1 ORDER BY nombre, apellido"
-            ).fetchall()
+            condiciones.append("empresa_id = ?")
+            params.append(user["empresa_id"])
+        where = (" WHERE " + " AND ".join(condiciones)) if condiciones else ""
+        total = conn.execute(
+            f"SELECT COUNT(*) AS n FROM empleados{where}", params
+        ).fetchone()["n"]
+        rows = conn.execute(
+            f"SELECT * FROM empleados{where} ORDER BY nombre, apellido LIMIT ? OFFSET ?",
+            (*params, limit, offset),
+        ).fetchall()
     finally:
         conn.close()
-    return {"empleados": [dict(r) for r in rows]}
+    return {
+        "empleados": [dict(r) for r in rows],
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": max(1, -(-total // limit)),
+    }
 
 
 def _normalizar_clave(clave: str) -> str:
@@ -60,13 +114,23 @@ def _leer_zip_fotos(datos: bytes) -> dict:
         archivo = zipfile.ZipFile(io.BytesIO(datos))
     except zipfile.BadZipFile:
         raise HTTPException(status_code=400, detail="El archivo de fotos no es un ZIP válido.")
+    nombres = archivo.namelist()
+    if len(nombres) > MAX_ENTRADAS_ZIP:
+        raise HTTPException(status_code=400, detail="El ZIP contiene demasiados archivos.")
     fotos = {}
-    for nombre in archivo.namelist():
+    total_descomprimido = 0
+    for nombre in nombres:
         ext = os.path.splitext(nombre)[1].lower()
         if ext not in EXT_FOTOS:
             continue
-        if archivo.getinfo(nombre).file_size > MAX_TAMANO_FOTO:
+        info = archivo.getinfo(nombre)
+        if info.file_size > MAX_TAMANO_FOTO:
             continue
+        total_descomprimido += info.file_size
+        if total_descomprimido > MAX_DESComprimido_ZIP:
+            raise HTTPException(
+                status_code=400, detail="El ZIP de fotos es demasiado grande al descomprimirse."
+            )
         fotos[os.path.basename(nombre).lower()] = archivo.read(nombre)
     return fotos
 
@@ -96,8 +160,10 @@ def _buscar_foto(fila: dict, cedula: str, fotos: dict):
 def carga_masiva(
     archivo: UploadFile = File(...),
     zip_fotos: UploadFile = File(None),
+    empresa_id: int = Form(None),
     user=Depends(require_admin),
 ):
+    destino = empresa_escrita(user, empresa_id)
     datos = archivo.file.read()
     if len(datos) > MAX_TAMANO_CSV:
         raise HTTPException(status_code=400, detail="El CSV supera el tamaño máximo (5 MB).")
@@ -119,7 +185,16 @@ def carga_masiva(
             status_code=400,
             detail="El CSV debe tener al menos las columnas 'nombre' y 'apellido'.",
         )
-    fotos = _leer_zip_fotos(zip_fotos.file.read()) if zip_fotos else {}
+    if zip_fotos:
+        datos_zip = zip_fotos.file.read(MAX_TAMANO_ZIP + 1)
+        if len(datos_zip) > MAX_TAMANO_ZIP:
+            raise HTTPException(
+                status_code=400,
+                detail=f"El ZIP de fotos supera el tamaño máximo ({MAX_TAMANO_ZIP // (1024 * 1024)} MB).",
+            )
+        fotos = _leer_zip_fotos(datos_zip)
+    else:
+        fotos = {}
 
     conn = database.get_connection()
     importados = 0
@@ -128,7 +203,9 @@ def carga_masiva(
     try:
         existentes = {
             (r["cedula"] or "").strip().lower()
-            for r in conn.execute("SELECT cedula FROM empleados").fetchall()
+            for r in conn.execute(
+                "SELECT cedula FROM empleados WHERE empresa_id = ?", (destino,)
+            ).fetchall()
         }
         for i, fila in enumerate(filas, start=2):
             nombre = normalizar_nombre((fila.get("nombre") or "").strip())
@@ -146,8 +223,8 @@ def carga_masiva(
                 errores.append({"fila": i, "motivo": "Foto no válida; se creó sin foto."})
                 nombre_foto = None
             conn.execute(
-                "INSERT INTO empleados (nombre, apellido, cedula, cargo, correo, telefono, foto) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO empleados (nombre, apellido, cedula, cargo, correo, telefono, foto, empresa_id) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     nombre,
                     apellido,
@@ -156,6 +233,7 @@ def carga_masiva(
                     normalizar_correo((fila.get("correo") or "").strip()),
                     (fila.get("telefono") or "").strip(),
                     nombre_foto,
+                    destino,
                 ),
             )
             importados += 1
@@ -168,11 +246,21 @@ def carga_masiva(
 
 
 @router.get("/carnets/zip")
-def descargar_carnets(request: Request, user=Depends(require_admin)):
+def descargar_carnets(
+    request: Request,
+    empresa_id: int = None,
+    user=Depends(require_admin),
+    _rate=Depends(rate_limit.limitar_zip),
+):
+    if es_super_admin(user) and empresa_id is not None:
+        filtro, params = " AND empresa_id = ?", [empresa_id]
+    else:
+        filtro, params = " AND empresa_id = ?", [user["empresa_id"]]
     conn = database.get_connection()
     try:
         empleados = conn.execute(
-            "SELECT * FROM empleados WHERE activo = 1 ORDER BY apellido, nombre"
+            "SELECT * FROM empleados WHERE activo = 1" + filtro + " ORDER BY apellido, nombre",
+            params,
         ).fetchall()
     finally:
         conn.close()
@@ -188,12 +276,13 @@ def descargar_carnets(request: Request, user=Depends(require_admin)):
     try:
         datos = generar_zip_carnets([dict(e) for e in empleados], base_local)
     except Exception as exc:
+        print(f"Error generando ZIP de carnets: {exc}")
         raise HTTPException(
             status_code=500,
             detail=(
-                "No se pudieron generar los PDFs: Chromium no está disponible. "
-                "En el servidor ejecuta: sudo .venv/bin/python -m playwright install-deps chromium. "
-                f"(Detalle: {str(exc)[:200]})"
+                "No se pudieron generar los PDFs. "
+                "Asegúrate de que Chromium esté instalado: "
+                "sudo .venv/bin/python -m playwright install-deps chromium."
             ),
         ) from exc
     return StreamingResponse(
@@ -204,7 +293,12 @@ def descargar_carnets(request: Request, user=Depends(require_admin)):
 
 
 @router.get("/{emp_id}/carnet-pdf")
-def generar_carnet_pdf(emp_id: int, request: Request):
+def generar_carnet_pdf(
+    emp_id: int,
+    request: Request,
+    user=Depends(get_current_user),
+    _rate=Depends(rate_limit.limitar_pdf),
+):
     conn = database.get_connection()
     try:
         emp = conn.execute(
@@ -214,6 +308,7 @@ def generar_carnet_pdf(emp_id: int, request: Request):
         conn.close()
     if not emp:
         raise HTTPException(status_code=404, detail="Empleado no encontrado")
+    exigir_en_alcance(user, emp["empresa_id"], "Empleado no encontrado")
 
     from urllib.parse import urlparse
 
@@ -224,12 +319,10 @@ def generar_carnet_pdf(emp_id: int, request: Request):
     try:
         datos = generar_pdf_carnet(dict(emp), base_local)
     except Exception as exc:
+        print(f"Error generando PDF para empleado {emp_id}: {exc}")
         raise HTTPException(
             status_code=500,
-            detail=(
-                "No se pudo generar el PDF. "
-                f"(Detalle: {str(exc)[:200]})"
-            ),
+            detail="No se pudo generar el PDF. Contacta al administrador.",
         ) from exc
     emp_dict = dict(emp)
     return StreamingResponse(
@@ -252,6 +345,7 @@ def obtener(emp_id: int, user=Depends(get_current_user)):
         conn.close()
     if not row:
         raise HTTPException(status_code=404, detail="Empleado no encontrado")
+    exigir_en_alcance(user, row["empresa_id"], "Empleado no encontrado")
     return dict(row)
 
 
@@ -263,15 +357,23 @@ def crear(
     cargo: str = Form(""),
     correo: str = Form(""),
     telefono: str = Form(""),
+    empresa_id: int = Form(None),
     foto: UploadFile = File(None),
     user=Depends(require_admin),
 ):
+    destino = empresa_escrita(user, empresa_id)
     nombre_foto = media.guardar_imagen(foto, "empleado") if foto else None
     conn = database.get_connection()
     try:
+        # A6: cédula única por empresa
+        if _cedula_duplicada(conn, cedula.strip(), destino):
+            raise HTTPException(
+                status_code=400,
+                detail=f"La cédula {cedula.strip()} ya está registrada en esta empresa.",
+            )
         cur = conn.execute(
-            "INSERT INTO empleados (nombre, apellido, cedula, cargo, correo, telefono, foto) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO empleados (nombre, apellido, cedula, cargo, correo, telefono, foto, empresa_id) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 normalizar_nombre(nombre),
                 normalizar_nombre(apellido),
@@ -280,13 +382,14 @@ def crear(
                 normalizar_correo(correo),
                 telefono.strip(),
                 nombre_foto,
+                destino,
             ),
         )
         conn.commit()
         emp_id = cur.lastrowid
     finally:
         conn.close()
-    return {"id": emp_id}
+    return {"id": emp_id, "empresa_id": destino}
 
 
 @router.put("/{emp_id}")
@@ -298,6 +401,7 @@ def actualizar(
     cargo: str = Form(None),
     correo: str = Form(None),
     telefono: str = Form(None),
+    empresa_id: int = Form(None),
     foto: UploadFile = File(None),
     user=Depends(get_current_user),
 ):
@@ -308,14 +412,22 @@ def actualizar(
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Empleado no encontrado")
+        exigir_en_alcance(user, row["empresa_id"], "Empleado no encontrado")
 
         valores = {}
-        if user["rol"] == "admin":
+        nuevo = None
+        if es_admin(user):
             if nombre is not None:
                 valores["nombre"] = normalizar_nombre(nombre)
             if apellido is not None:
                 valores["apellido"] = normalizar_nombre(apellido)
             if cedula is not None:
+                # A6: cédula única por empresa
+                if _cedula_duplicada(conn, cedula.strip(), row["empresa_id"], excluir_id=emp_id):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"La cédula {cedula.strip()} ya está registrada en esta empresa.",
+                    )
                 valores["cedula"] = cedula.strip()
             if cargo is not None:
                 valores["cargo"] = normalizar_nombre(cargo, conservar_siglas=True)
@@ -323,15 +435,27 @@ def actualizar(
                 valores["correo"] = normalizar_correo(correo)
             if telefono is not None:
                 valores["telefono"] = telefono.strip()
+            if foto:
+                nuevo = media.guardar_imagen(foto, "empleado")
+                valores["foto"] = nuevo
+            # solo super_admin puede mover el empleado a otra empresa
+            if empresa_id is not None and empresa_id != row["empresa_id"]:
+                if not es_super_admin(user):
+                    raise HTTPException(
+                        status_code=403, detail="No puedes mover empleados a otra empresa"
+                    )
+                destino = empresa_escrita(user, empresa_id)
+                valores["empresa_id"] = destino
         else:
+            if foto:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Solo un administrador puede cambiar la foto",
+                )
             if correo is not None:
                 valores["correo"] = normalizar_correo(correo)
             if telefono is not None:
                 valores["telefono"] = telefono.strip()
-
-        if foto:
-            nuevo = media.guardar_imagen(foto, "empleado")
-            valores["foto"] = nuevo
 
         if not valores:
             raise HTTPException(status_code=400, detail="No hay campos para actualizar")
@@ -342,7 +466,7 @@ def actualizar(
             (*valores.values(), emp_id),
         )
         conn.commit()
-        if foto and row["foto"] and row["foto"] != nuevo:
+        if nuevo and row["foto"] and row["foto"] != nuevo:
             media.eliminar_archivo(row["foto"])
     finally:
         conn.close()
@@ -354,10 +478,11 @@ def desactivar(emp_id: int, user=Depends(require_admin)):
     conn = database.get_connection()
     try:
         row = conn.execute(
-            "SELECT id FROM empleados WHERE id = ?", (emp_id,)
+            "SELECT id, empresa_id FROM empleados WHERE id = ?", (emp_id,)
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Empleado no encontrado")
+        exigir_en_alcance(user, row["empresa_id"], "Empleado no encontrado")
         conn.execute(
             "UPDATE empleados SET activo = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
             (emp_id,),
@@ -373,10 +498,11 @@ def restaurar(emp_id: int, user=Depends(require_admin)):
     conn = database.get_connection()
     try:
         row = conn.execute(
-            "SELECT id FROM empleados WHERE id = ?", (emp_id,)
+            "SELECT id, empresa_id FROM empleados WHERE id = ?", (emp_id,)
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Empleado no encontrado")
+        exigir_en_alcance(user, row["empresa_id"], "Empleado no encontrado")
         conn.execute(
             "UPDATE empleados SET activo = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
             (emp_id,),

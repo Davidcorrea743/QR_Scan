@@ -37,9 +37,17 @@ def token_editor(client, auth_headers):
         json={"username": "editor", "password": "clave123", "rol": "editor"},
         headers=auth_headers,
     )
-    return client.post(
+    token = client.post(
         "/api/login", json={"username": "editor", "password": "clave123"}
     ).json()["access_token"]
+    # El editor nuevo tiene debe_cambiar_password=1; lo limpiamos para que el
+    # token sirva en los endpoints (como si ya hubiera cambiado su clave).
+    client.post(
+        "/api/password",
+        json={"password_actual": "clave123", "password_nueva": "clave123"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    return token
 
 
 def test_crear_empleado(client, auth_headers):
@@ -97,6 +105,28 @@ def test_editor_solo_edita_telefono_y_correo(client, auth_headers):
     assert emp["apellido"] == "Pérez"
     assert emp["cedula"] == "1090123456"
     assert emp["cargo"] == "Desarrollador"
+
+
+def test_editor_no_puede_cambiar_foto(client, auth_headers):
+    emp_id = crear_empleado(client, auth_headers).json()["id"]
+    foto_original = client.get(f"/api/empleados/{emp_id}", headers=auth_headers).json()[
+        "foto"
+    ]
+    assert foto_original
+
+    tok = token_editor(client, auth_headers)
+    res = client.put(
+        f"/api/empleados/{emp_id}",
+        data={"correo": "nuevo@empresa.com"},
+        files={"foto": ("nueva.png", png_bytes(), "image/png")},
+        headers={"Authorization": f"Bearer {tok}"},
+    )
+    assert res.status_code == 400
+    assert "administrador" in res.json()["detail"].lower()
+
+    emp = client.get(f"/api/empleados/{emp_id}", headers=auth_headers).json()
+    assert emp["foto"] == foto_original
+    assert emp["correo"] == "juan@empresa.com"  # la petición completa se rechazó
 
 
 def test_admin_edita_todos_los_campos(client, auth_headers):
@@ -408,3 +438,47 @@ def test_descargar_carnets_zip_error_claro(client, auth_headers, monkeypatch):
     res = client.get("/api/empleados/carnets/zip", headers=auth_headers)
     assert res.status_code == 500
     assert "playwright install-deps" in res.json()["detail"]
+
+
+def test_listar_empleados_paginacion(client, auth_headers):
+    for i in range(3):
+        r = crear_empleado(
+            client, auth_headers, nombre=f"Emp{i}", cedula=f"V{i}000000{i}"
+        )
+        assert r.status_code == 200, r.text
+
+    r = client.get("/api/empleados", params={"page": 1, "limit": 2}, headers=auth_headers)
+    data = r.json()
+    assert data["total"] == 3
+    assert len(data["empleados"]) == 2
+    assert data["page"] == 1
+    assert data["pages"] == 2
+
+    r = client.get("/api/empleados", params={"page": 2, "limit": 2}, headers=auth_headers)
+    data = r.json()
+    assert data["total"] == 3
+    assert len(data["empleados"]) == 1
+    assert data["page"] == 2
+
+
+def test_carga_masiva_zip_supera_limite(client, auth_headers, monkeypatch):
+    from routers import empleados as mod_empleados
+
+    monkeypatch.setattr(mod_empleados, "MAX_TAMANO_ZIP", 1000)
+
+    csv = b"nombre,apellido\nAna,Garcia\n"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        # contenido aleatorio (no comprimible) para que el ZIP supere 1000 bytes
+        z.writestr("cedula.jpg", os.urandom(5000))
+
+    res = client.post(
+        "/api/empleados/carga-masiva",
+        files={
+            "archivo": ("empleados.csv", csv, "text/csv"),
+            "zip_fotos": ("fotos.zip", buf.getvalue(), "application/zip"),
+        },
+        headers=auth_headers,
+    )
+    assert res.status_code == 400
+    assert "ZIP" in res.json()["detail"]

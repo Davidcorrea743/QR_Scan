@@ -52,6 +52,10 @@
             <label>Teléfono / WhatsApp</label>
             <input type="tel" id="telefono" placeholder="3001234567">
           </div>
+          <div class="oculto" id="campoEmpresa">
+            <label>Empresa *</label>
+            <select id="empresa"></select>
+          </div>
           <div class="full">
             <label>Foto del empleado</label>
             <input type="file" id="foto" accept="image/png,image/jpeg,image/webp">
@@ -80,13 +84,24 @@
   <script>
     if (!requiereLogin()) {}
 
-    var esAdmin = getRol() === "admin";
+    var esAdmin = getRol() === "admin" || getRol() === "super_admin";
+    var esSuper = esSuperAdmin();
     var empleadoId = new URLSearchParams(window.location.search).get("id");
     var esNuevo = !empleadoId;
     var URL_CARNET = "", URL_PERFIL = "";
 
     document.getElementById("nombreUsuario").textContent = getUsername();
     document.getElementById("rolUsuario").textContent = getRol();
+
+    if (esSuper) {
+      document.getElementById("campoEmpresa").classList.remove("oculto");
+      api("/api/empresas").then(function (data) {
+        document.getElementById("empresa").innerHTML =
+          (data.empresas || []).map(function (e) {
+            return '<option value="' + e.id + '">' + esc(e.nombre) + "</option>";
+          }).join("");
+      }).catch(function () {});
+    }
 
     if (!esAdmin && esNuevo) {
       document.getElementById("mensaje").textContent = "Solo el administrador puede crear empleados.";
@@ -114,6 +129,7 @@
         document.getElementById("cargo").value = e.cargo || "";
         document.getElementById("correo").value = e.correo || "";
         document.getElementById("telefono").value = e.telefono || "";
+        if (esSuper) document.getElementById("empresa").value = e.empresa_id || "";
         if (e.foto) {
           document.getElementById("previewFoto").src = "/uploads/" + encodeURIComponent(e.foto);
         }
@@ -145,6 +161,7 @@
         fd.append("cargo", document.getElementById("cargo").value);
         fd.append("correo", document.getElementById("correo").value);
         fd.append("telefono", document.getElementById("telefono").value);
+        if (esSuper) fd.append("empresa_id", document.getElementById("empresa").value);
         var foto = document.getElementById("foto").files[0];
         if (foto) fd.append("foto", foto);
       } else {
@@ -155,6 +172,7 @@
           fd.append("cargo", document.getElementById("cargo").value);
           fd.append("correo", document.getElementById("correo").value);
           fd.append("telefono", document.getElementById("telefono").value);
+          if (esSuper) fd.append("empresa_id", document.getElementById("empresa").value);
           var foto2 = document.getElementById("foto").files[0];
           if (foto2) fd.append("foto", foto2);
         } else {

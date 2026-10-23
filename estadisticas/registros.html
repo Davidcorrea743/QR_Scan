@@ -19,11 +19,72 @@
       padding: 20px;
       margin-bottom: 20px;
     }
+    .login-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .login-overlay.oculto { display: none; }
+    .login-box {
+      background: white;
+      border-radius: 12px;
+      padding: 28px;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+    .paginacion {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .pag-btn {
+      min-width: 36px;
+      height: 36px;
+      padding: 0 11px;
+      border: 1px solid #dee2e6;
+      background: #fff;
+      color: #212529;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+    .pag-btn:hover:not(:disabled):not(.pag-activo) { background: #e9ecef; border-color: #adb5bd; }
+    .pag-btn.pag-activo { background: #198754; border-color: #198754; color: #fff; }
+    .pag-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .pag-puntos { color: #6c757d; padding: 0 3px; font-weight: 700; }
+    .pag-info { font-size: 13px; color: #6c757d; font-weight: 600; margin-left: 8px; }
   </style>
 </head>
 <body class="bg-light">
+  <!-- Overlay de login -->
+  <div id="loginOverlay" class="login-overlay oculto">
+    <div class="login-box">
+      <h4 class="mb-3 text-center text-success">📊 Dashboard de Escaneos</h4>
+      <p class="text-muted small text-center mb-3">Inicia sesión para ver las estadísticas.</p>
+      <input id="loginUser" type="text" class="form-control mb-2" placeholder="Usuario" autocomplete="username">
+      <input id="loginPass" type="password" class="form-control mb-2" placeholder="Contraseña" autocomplete="current-password">
+      <div id="loginMsg" class="text-danger small mb-2" style="display:none"></div>
+      <button class="btn btn-success w-100" onclick="hacerLogin()">Entrar</button>
+    </div>
+  </div>
+
   <div class="container mt-4">
-    <h1 class="mb-4 text-center text-success">📊 Estadísticas y Registros de Escaneos QR</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="text-center text-success mb-0">📊 Estadísticas y Registros de Escaneos QR</h1>
+      <button class="btn btn-outline-secondary btn-sm" onclick="logout()">Salir</button>
+    </div>
 
     <!-- Resumen de Estadísticas -->
     <div class="row mb-4" id="resumenStats">
@@ -57,6 +118,12 @@
     <!-- Filtros Avanzados -->
     <div class="filter-section">
       <h4 class="mb-3">🔍 Filtros Avanzados</h4>
+      <div class="row mb-3 d-none" id="empresaFiltroWrap">
+        <div class="col-md-3">
+          <label class="form-label">Empresa:</label>
+          <select id="empresaFiltro" class="form-control" onchange="cambiarEmpresa(this.value)"></select>
+        </div>
+      </div>
       <div class="row mb-3">
         <div class="col-md-3">
           <label class="form-label">Fecha específica:</label>
@@ -92,8 +159,10 @@
         <div class="col-md-3">
           <label class="form-label">Límite de registros:</label>
           <select id="limiteFiltro" class="form-control">
+            <option value="10" selected>10 registros</option>
+            <option value="30">30 registros</option>
             <option value="50">50 registros</option>
-            <option value="100" selected>100 registros</option>
+            <option value="100">100 registros</option>
             <option value="200">200 registros</option>
             <option value="500">500 registros</option>
           </select>
@@ -123,7 +192,7 @@
         <div class="col-md-6">
           <label class="form-label">&nbsp;</label>
           <div class="d-flex gap-2">
-            <button class="btn btn-success flex-fill" onclick="cargarRegistros()">🔍 Filtrar Registros</button>
+            <button class="btn btn-success flex-fill" onclick="paginaRegistros = 1; cargarRegistros()">🔍 Filtrar Registros</button>
             <button class="btn btn-info flex-fill" onclick="cargarEstadisticas()">📊 Actualizar Estadísticas</button>
             <button class="btn btn-secondary flex-fill" onclick="limpiarFiltros()">🗑️ Limpiar</button>
           </div>
@@ -150,6 +219,7 @@
                 <th>User Agent</th>
                 <th>Año</th>
                 <th>Mes</th>
+                <th class="empresa-col d-none">Empresa</th>
               </tr>
             </thead>
             <tbody id="tablaRegistros">
@@ -159,19 +229,138 @@
             </tbody>
           </table>
         </div>
+        <div class="paginacion mt-3" id="pagRegistros"></div>
       </div>
     </div>
   </div>
 
   <script>
     let chartPorDia, chartPorHora;
+    let paginaRegistros = 1;
+    let empresaSeleccionada = "";
+    let mapaEmpresas = {};
+    const esSuper = getRol() === "super_admin";
+    const COLS_TABLA = esSuper ? 9 : 8;
+
+    function getToken() { return localStorage.getItem("token") || ""; }
+
+    function getRol() {
+      if (localStorage.getItem("rol")) return localStorage.getItem("rol");
+      try {
+        const b = getToken().split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+        const payload = JSON.parse(atob(b + "=".repeat((4 - (b.length % 4)) % 4)));
+        return payload.rol || "";
+      } catch (e) { return ""; }
+    }
+
+    async function initEmpresa() {
+      if (!esSuper) return;
+      document.getElementById("empresaFiltroWrap").classList.remove("d-none");
+      document.querySelector(".empresa-col").classList.remove("d-none");
+      const tdInicial = document.querySelector("#tablaRegistros td");
+      if (tdInicial) tdInicial.colSpan = COLS_TABLA;
+      try {
+        const data = await api("/api/empresas");
+        const lista = data.empresas || [];
+        lista.forEach(e => { mapaEmpresas[e.id] = e.nombre; });
+        document.getElementById("empresaFiltro").innerHTML =
+          '<option value="">Todas las empresas</option>' +
+          lista.map(e => `<option value="${e.id}">${esc(e.nombre)}</option>`).join("");
+      } catch (e) { console.error("Error al cargar empresas:", e); }
+    }
+
+    function cambiarEmpresa(v) {
+      empresaSeleccionada = v || "";
+      paginaRegistros = 1;
+      cargarRegistros();
+      cargarEstadisticas();
+    }
+
+    function renderPaginacion(elId, page, pages, onGo) {
+      const el = document.getElementById(elId);
+      if (!el) return;
+      if (!pages || pages <= 1) { el.innerHTML = ""; return; }
+
+      const btn = (p, label, opts = {}) => {
+        const cls = "pag-btn" + (opts.active ? " pag-activo" : "");
+        return `<button class="${cls}"${opts.disabled ? " disabled" : ""} ` +
+          `onclick="${onGo}(${p})">${label}</button>`;
+      };
+
+      let nums = [];
+      if (pages <= 7) {
+        for (let i = 1; i <= pages; i++) nums.push(i);
+      } else {
+        nums.push(1);
+        if (page > 3) nums.push("...");
+        for (let i = Math.max(2, page - 1); i <= Math.min(pages - 1, page + 1); i++) nums.push(i);
+        if (page < pages - 2) nums.push("...");
+        nums.push(pages);
+      }
+
+      let html = btn(Math.max(1, page - 1), "‹", { disabled: page <= 1 });
+      for (const n of nums) {
+        html += (n === "...")
+          ? '<span class="pag-puntos">…</span>'
+          : btn(n, n, { active: n === page });
+      }
+      html += btn(Math.min(pages, page + 1), "›", { disabled: page >= pages });
+      html += `<span class="pag-info">Página ${page} de ${pages}</span>`;
+      el.innerHTML = html;
+    }
+
+    function irPaginaRegistros(p) { paginaRegistros = p; cargarRegistros(); }
+
+    function logout() {
+      localStorage.removeItem("token");
+      localStorage.removeItem("rol");
+      window.location.reload();
+    }
+
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+
+    async function api(url) {
+      const res = await fetch(url, { headers: { "Authorization": "Bearer " + getToken() } });
+      if (res.status === 401) { logout(); throw new Error("Sesión expirada"); }
+      return res.json();
+    }
+
+    async function hacerLogin() {
+      const msg = document.getElementById("loginMsg");
+      msg.style.display = "none";
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: document.getElementById("loginUser").value,
+            password: document.getElementById("loginPass").value
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Error al iniciar sesión");
+        localStorage.setItem("token", data.access_token);
+        localStorage.setItem("rol", data.rol);
+        document.getElementById("loginOverlay").classList.add("oculto");
+        await initEmpresa();
+        cargarEstadisticas();
+        cargarRegistros();
+      } catch (e) {
+        msg.textContent = e.message;
+        msg.style.display = "block";
+      }
+    }
 
     // Función para cargar estadísticas
     async function cargarEstadisticas() {
       try {
-        const res = await fetch("http://127.0.0.1:8001/estadisticas");
-        const data = await res.json();
-        
+        let url = "/estadisticas";
+        if (empresaSeleccionada) url += "?empresa_id=" + empresaSeleccionada;
+        const data = await api(url);
         mostrarResumenStats(data);
         crearGraficos(data);
       } catch (error) {
@@ -215,7 +404,7 @@
       // Gráfico por día
       const ctxDia = document.getElementById('chartPorDia').getContext('2d');
       if (chartPorDia) chartPorDia.destroy();
-      
+
       chartPorDia = new Chart(ctxDia, {
         type: 'line',
         data: {
@@ -241,7 +430,7 @@
       // Gráfico por hora
       const ctxHora = document.getElementById('chartPorHora').getContext('2d');
       if (chartPorHora) chartPorHora.destroy();
-      
+
       chartPorHora = new Chart(ctxHora, {
         type: 'bar',
         data: {
@@ -272,7 +461,7 @@
       const horaFin = document.getElementById("horaFinFiltro").value;
       const limite = document.getElementById("limiteFiltro").value;
 
-      let url = "http://127.0.0.1:8001/registros";
+      let url = "/registros";
       const params = [];
 
       if (fecha) params.push("fecha=" + fecha);
@@ -280,47 +469,50 @@
       if (año) params.push("año=" + año);
       if (horaInicio) params.push("hora_inicio=" + horaInicio);
       if (horaFin) params.push("hora_fin=" + horaFin);
+      if (empresaSeleccionada) params.push("empresa_id=" + empresaSeleccionada);
       if (limite) params.push("limit=" + limite);
+      params.push("page=" + paginaRegistros);
 
       if (params.length > 0) {
         url += "?" + params.join("&");
       }
 
       try {
-        const res = await fetch(url);
-        const data = await res.json();
-        mostrarTabla(data.registros, data.total);
+        const data = await api(url);
+        mostrarTabla(data.registros, data.total, data.page, data.pages);
       } catch (error) {
         console.error("Error al cargar registros:", error);
-        document.getElementById("tablaRegistros").innerHTML = 
-          '<tr><td colspan="8" class="text-center text-danger">Error al cargar registros</td></tr>';
+        document.getElementById("tablaRegistros").innerHTML =
+          `<tr><td colspan="${COLS_TABLA}" class="text-center text-danger">Error al cargar registros</td></tr>`;
       }
     }
 
     // Función para mostrar tabla
-    function mostrarTabla(registros, total) {
+    function mostrarTabla(registros, total, page, pages) {
       const tbody = document.getElementById("tablaRegistros");
       const totalSpan = document.getElementById("totalRegistros");
-      
-      totalSpan.textContent = `${total || registros.length} registros`;
-      
+
+      totalSpan.textContent = `${total || 0} registros`;
+      renderPaginacion("pagRegistros", page, pages, "irPaginaRegistros");
+
       if (registros.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No hay registros que coincidan con los filtros</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="${COLS_TABLA}" class="text-center">No hay registros que coincidan con los filtros</td></tr>`;
         return;
       }
-      
+
       tbody.innerHTML = "";
       registros.forEach(r => {
         tbody.innerHTML += `
           <tr>
-            <td>${r.id}</td>
-            <td>${r.fecha}</td>
-            <td>${r.hora}</td>
-            <td>${r.timestamp ? new Date(r.timestamp).toLocaleString() : '-'}</td>
-            <td>${r.ip || "-"}</td>
-            <td title="${r.user_agent || ''}">${r.user_agent ? r.user_agent.substring(0, 30) + '...' : '-'}</td>
-            <td>${r.year || '-'}</td>
-            <td>${r.month || '-'}</td>
+            <td>${esc(r.id)}</td>
+            <td>${esc(r.fecha)}</td>
+            <td>${esc(r.hora)}</td>
+            <td>${r.timestamp ? esc(new Date(r.timestamp).toLocaleString()) : '-'}</td>
+            <td>${esc(r.ip) || "-"}</td>
+            <td title="${esc(r.user_agent)}">${r.user_agent ? esc(r.user_agent.substring(0, 30)) + '...' : '-'}</td>
+            <td>${esc(r.year) || '-'}</td>
+            <td>${esc(r.month) || '-'}</td>
+            ${esSuper ? `<td>${esc(mapaEmpresas[r.empresa_id] || r.empresa_id || "-")}</td>` : ""}
           </tr>
         `;
       });
@@ -333,12 +525,18 @@
       document.getElementById("añoFiltro").value = "";
       document.getElementById("horaInicioFiltro").value = "";
       document.getElementById("horaFinFiltro").value = "";
-      document.getElementById("limiteFiltro").value = "100";
+      document.getElementById("limiteFiltro").value = "10";
+      paginaRegistros = 1;
       cargarRegistros();
     }
 
-    // Cargar datos al inicio
-    document.addEventListener('DOMContentLoaded', function() {
+    // Cargar datos al inicio (solo si hay sesión)
+    document.addEventListener('DOMContentLoaded', async function() {
+      if (!getToken()) {
+        document.getElementById("loginOverlay").classList.remove("oculto");
+        return;
+      }
+      await initEmpresa();
       cargarEstadisticas();
       cargarRegistros();
     });
